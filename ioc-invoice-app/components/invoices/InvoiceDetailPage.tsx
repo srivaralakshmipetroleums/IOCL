@@ -39,7 +39,12 @@ export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> 
   }
 
   async function handleRetry() {
-    await fetch(`/api/invoices/${id}/retry`, { method: "POST" });
+    const mode = localStorage.getItem("ioc-extraction-mode") || "claude";
+    await fetch(`/api/invoices/${id}/retry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ extractorMode: mode }),
+    });
     queryClient.invalidateQueries({ queryKey: ["invoice", id] });
   }
 

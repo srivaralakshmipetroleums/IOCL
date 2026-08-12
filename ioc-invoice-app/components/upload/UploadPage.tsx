@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Upload, FileText, X, CheckCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Upload, FileText, X, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
+import { PeriodSelector } from "./PeriodSelector";
+import type { DatePeriod } from "@/lib/invoices/period-utils";
+import { getMonthDateRange } from "@/lib/invoices/period-utils";
+
+const EXTRACTION_MODE_KEY = "ioc-extraction-mode";
 
 interface UploadItem {
   file: File;
@@ -16,11 +23,38 @@ interface UploadItem {
   error?: string;
 }
 
+interface ExtractionConfig {
+  claudeConfigured: boolean;
+  defaultMode: "claude" | "local";
+  providerLabel: string;
+  serviceRoleConfigured: boolean;
+}
+
 export function UploadPage() {
   const [files, setFiles] = useState<UploadItem[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [useAiExtraction, setUseAiExtraction] = useState(true);
+  const [lastExtractorMode, setLastExtractorMode] = useState<string>("");
+  const [period, setPeriod] = useState<DatePeriod>(() => {
+    const now = new Date();
+    return getMonthDateRange(now.getFullYear(), now.getMonth() + 1);
+  });
+
+  const { data: extractionConfig } = useQuery<ExtractionConfig>({
+    queryKey: ["extraction-config"],
+    queryFn: () => fetch("/api/settings/extraction").then((r) => r.json()),
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem(EXTRACTION_MODE_KEY);
+    if (saved === "claude" || saved === "local") {
+      setUseAiExtraction(saved === "claude");
+    } else if (extractionConfig) {
+      setUseAiExtraction(extractionConfig.claudeConfigured);
+    }
+  }, [extractionConfig]);
 
   const { data: jobStatus } = useQuery({
     queryKey: ["job-status", jobId],
@@ -44,15 +78,28 @@ export function UploadPage() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  function handleExtractionToggle(checked: boolean) {
+    setUseAiExtraction(checked);
+    localStorage.setItem(EXTRACTION_MODE_KEY, checked ? "claude" : "local");
+  }
+
   async function handleUpload() {
     if (!files.length) return;
+
+    const extractorMode = useAiExtraction ? "claude" : "local";
+    if (useAiExtraction && !extractionConfig?.claudeConfigured) {
+      alert("Claude API key is not configured. Add ANTHROPIC_API_KEY to .env.local and restart the dev server.");
+      return;
+    }
+
     setUploading(true);
+    setLastExtractorMode(extractorMode);
 
     try {
       const createRes = await fetch("/api/upload/create-job", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ totalFiles: files.length }),
+        body: JSON.stringify({ totalFiles: files.length, period }),
       });
       const { jobId: newJobId } = await createRes.json();
       setJobId(newJobId);
@@ -91,15 +138,24 @@ export function UploadPage() {
         setFiles([...updatedFiles]);
       }
 
-      await fetch("/api/upload/start", {
+      setProcessing(true);
+
+      const startRes = await fetch("/api/upload/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: newJobId }),
+        body: JSON.stringify({ jobId: newJobId, extractorMode, period }),
       });
 
-      setProcessing(true);
+      if (!startRes.ok) {
+        const err = await startRes.json();
+        throw new Error(err.error || "Extraction failed");
+      }
+
+      const startData = await startRes.json();
+      setLastExtractorMode(startData.extractorMode || extractorMode);
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
     }
@@ -117,6 +173,54 @@ export function UploadPage() {
         <h1 className="text-3xl font-bold">Upload IOC Invoice PDFs</h1>
         <p className="text-muted-foreground">Drag and drop or browse to upload invoice PDFs</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice Period</CardTitle>
+          <CardDescription>
+            Select the month, year, or date range these invoices belong to. Already-extracted PDFs skip the API.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PeriodSelector onChange={setPeriod} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            AI Extraction
+          </CardTitle>
+          <CardDescription>
+            Automatically extract invoice data from PDFs using Claude API
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={useAiExtraction}
+                onChange={(e) => handleExtractionToggle(e.target.checked)}
+                disabled={!extractionConfig?.claudeConfigured}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <span className="text-sm font-medium">Use Claude AI extraction</span>
+            </label>
+            {extractionConfig?.claudeConfigured ? (
+              <Badge variant="success">Claude API connected</Badge>
+            ) : (
+              <Badge variant="warning">API key not detected — restart dev server after adding keys</Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {useAiExtraction && extractionConfig?.claudeConfigured
+              ? "PDFs will be sent to Claude for automatic field extraction."
+              : "Sample fixture data will be used instead of real PDF extraction."}
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -149,6 +253,7 @@ export function UploadPage() {
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">{item.file.name}</span>
                     <StatusIcon status={item.status} />
+                    {item.error && <span className="text-xs text-destructive">{item.error}</span>}
                   </div>
                   {!uploading && !processing && (
                     <Button variant="ghost" size="icon" onClick={() => removeFile(i)}>
@@ -159,7 +264,9 @@ export function UploadPage() {
               ))}
               {!uploading && !processing && (
                 <Button onClick={handleUpload} className="mt-4" disabled={!files.length}>
-                  Upload & Process {files.length} file{files.length !== 1 ? "s" : ""}
+                  {useAiExtraction && extractionConfig?.claudeConfigured
+                    ? `Upload & Extract with AI (${files.length} file${files.length !== 1 ? "s" : ""})`
+                    : `Upload & Process (${files.length} file${files.length !== 1 ? "s" : ""})`}
                 </Button>
               )}
             </div>
@@ -167,6 +274,11 @@ export function UploadPage() {
 
           {processing && jobStatus?.job && (
             <div className="mt-6 space-y-4">
+              {lastExtractorMode && (
+                <p className="text-sm text-muted-foreground">
+                  Extractor: <strong>{lastExtractorMode === "claude" ? "Claude API" : "Local sample data"}</strong>
+                </p>
+              )}
               <div className="flex items-center justify-between text-sm">
                 <span>
                   {jobStatus.job.processed_files} / {jobStatus.job.total_files} processed
@@ -174,11 +286,22 @@ export function UploadPage() {
                 <span>{progress}%</span>
               </div>
               <Progress value={progress} />
+              {jobStatus.items?.map((item: { id: string; filename: string; status: string; error_message?: string }) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <span>{item.filename}</span>
+                  <span className={item.status === "FAILED" ? "text-destructive" : "text-muted-foreground"}>
+                    {item.status}{item.error_message ? `: ${item.error_message}` : ""}
+                  </span>
+                </div>
+              ))}
               {isComplete && (
-                <div className="rounded-md bg-muted p-4 text-sm">
+                <div className="rounded-md bg-muted p-4 text-sm space-y-2">
                   <p>Successful: {jobStatus.job.successful_files}</p>
                   <p>Failed: {jobStatus.job.failed_files}</p>
                   <p>Skipped (duplicates): {jobStatus.job.skipped_files}</p>
+                  <Link href="/invoices">
+                    <Button variant="outline" size="sm" className="mt-2">View Invoices</Button>
+                  </Link>
                 </div>
               )}
             </div>

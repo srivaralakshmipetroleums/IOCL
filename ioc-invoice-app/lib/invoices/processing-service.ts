@@ -1,20 +1,30 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import { getExtractor } from "@/lib/extraction/claude-extractor";
+import { getExtractor, isClaudeConfigured, type ExtractorMode } from "@/lib/extraction/get-extractor";
 import { normalizeExtraction } from "@/lib/invoices/normalize-extraction";
 import { invoiceRepository } from "@/lib/invoices/invoice-repository";
 import { duplicateService } from "@/lib/invoices/duplicate-service";
 import type { NormalizedInvoice } from "@/lib/invoices/normalize-extraction";
+import { computePdfHash } from "@/lib/invoices/content-hash";
+import { isDateInPeriod, type DatePeriod } from "@/lib/invoices/period-utils";
 
 export class ProcessingService {
-  async createJob(userId: string, totalFiles: number): Promise<string> {
+  async createJob(
+    userId: string,
+    totalFiles: number,
+    period?: Pick<DatePeriod, "dateFrom" | "dateTo" | "label">,
+    jobType: string = "INVOICE_UPLOAD"
+  ): Promise<string> {
     const supabase = await createServiceClient();
     const { data, error } = await supabase
       .from("processing_jobs")
       .insert({
-        job_type: "INVOICE_UPLOAD",
+        job_type: jobType,
         status: "PENDING",
         total_files: totalFiles,
         created_by: userId,
+        period_start: period?.dateFrom || null,
+        period_end: period?.dateTo || null,
+        period_label: period?.label || null,
       })
       .select("id")
       .single();
@@ -46,8 +56,13 @@ export class ProcessingService {
   async processItem(
     itemId: string,
     storagePath: string,
-    replaceInvoiceId?: string
-  ): Promise<{ invoiceId: string; status: string }> {
+    options: {
+      replaceInvoiceId?: string;
+      extractorMode?: ExtractorMode;
+      period?: Pick<DatePeriod, "dateFrom" | "dateTo">;
+    } = {}
+  ): Promise<{ invoiceId: string; status: string; provider: string }> {
+    const { replaceInvoiceId, extractorMode = "auto", period } = options;
     const supabase = await createServiceClient();
 
     await this.updateJobItem(itemId, {
@@ -69,7 +84,27 @@ export class ProcessingService {
       await this.updateJobItem(itemId, { progress: 30 });
 
       const buffer = Buffer.from(await fileData.arrayBuffer());
-      const extractor = getExtractor();
+      const contentHash = computePdfHash(buffer);
+
+      // Skip API call if this exact PDF was already extracted
+      if (!replaceInvoiceId) {
+        const existingByHash = await duplicateService.findByContentHash(contentHash);
+        if (existingByHash) {
+          await this.updateJobItem(itemId, {
+            status: "SKIPPED",
+            progress: 100,
+            invoice_id: existingByHash.id,
+            completed_at: new Date().toISOString(),
+            error_message: `Already extracted (invoice ${existingByHash.invoice_number}) — API skipped`,
+          });
+          return { invoiceId: existingByHash.id, status: "SKIPPED", provider: "cached" };
+        }
+      }
+
+      await this.updateJobItem(itemId, { progress: 40 });
+
+      const extractor = getExtractor(extractorMode);
+      const provider = extractorMode === "local" ? "local" : isClaudeConfigured() ? "claude" : "local";
       const extracted = await extractor.extract({ pdfBuffer: buffer, filename: storagePath });
 
       await this.updateJobItem(itemId, { progress: 60 });
@@ -78,6 +113,19 @@ export class ProcessingService {
         pdfStoragePath: storagePath,
         status: "EXTRACTED",
       });
+      normalized.invoice.content_hash = contentHash;
+
+      if (period && normalized.invoice.invoice_date) {
+        if (!isDateInPeriod(normalized.invoice.invoice_date, period)) {
+          await this.updateJobItem(itemId, {
+            status: "FAILED",
+            progress: 100,
+            error_message: `Invoice date ${normalized.invoice.invoice_date} is outside selected period`,
+            completed_at: new Date().toISOString(),
+          });
+          throw new Error("Invoice date outside selected period");
+        }
+      }
 
       if (!replaceInvoiceId) {
         const existing = await duplicateService.findDuplicate(
@@ -93,7 +141,7 @@ export class ProcessingService {
             completed_at: new Date().toISOString(),
             error_message: `Duplicate of invoice ${existing.invoice_number}`,
           });
-          return { invoiceId: existing.id, status: "DUPLICATE" };
+          return { invoiceId: existing.id, status: "DUPLICATE", provider };
         }
       }
 
@@ -107,7 +155,7 @@ export class ProcessingService {
         completed_at: new Date().toISOString(),
       });
 
-      return { invoiceId: invoice.id, status: "COMPLETED" };
+      return { invoiceId: invoice.id, status: "COMPLETED", provider };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       const { logError } = await import("@/lib/utils/logger");
@@ -122,7 +170,11 @@ export class ProcessingService {
     }
   }
 
-  async startJob(jobId: string): Promise<void> {
+  async startJob(
+    jobId: string,
+    extractorMode: ExtractorMode = "auto",
+    period?: Pick<DatePeriod, "dateFrom" | "dateTo">
+  ): Promise<void> {
     const supabase = await createServiceClient();
 
     await supabase
@@ -144,8 +196,8 @@ export class ProcessingService {
     for (const item of items || []) {
       if (!item.storage_path) continue;
       try {
-        const result = await this.processItem(item.id, item.storage_path);
-        if (result.status === "DUPLICATE") skipped++;
+        const result = await this.processItem(item.id, item.storage_path, { extractorMode, period });
+        if (result.status === "DUPLICATE" || result.status === "SKIPPED") skipped++;
         else successful++;
       } catch {
         failed++;
@@ -182,13 +234,13 @@ export class ProcessingService {
     return { job, items: items || [] };
   }
 
-  async retryInvoice(invoiceId: string): Promise<void> {
+  async retryInvoice(invoiceId: string, extractorMode: ExtractorMode = "auto"): Promise<void> {
     const invoice = await invoiceRepository.getById(invoiceId);
     if (!invoice?.pdf_storage_path) throw new Error("No PDF found for invoice");
 
     await invoiceRepository.update(invoiceId, { status: "PROCESSING" });
 
-    const extractor = getExtractor();
+    const extractor = getExtractor(extractorMode);
     const supabase = await createServiceClient();
     const { data: fileData } = await supabase.storage
       .from("invoice-pdfs")

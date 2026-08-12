@@ -83,12 +83,3 @@ export class ClaudeInvoiceExtractor implements InvoiceExtractor {
     return { ...validated, raw_response: parsed };
   }
 }
-
-import { LocalInvoiceExtractor } from "./local-extractor";
-
-export function getExtractor(): InvoiceExtractor {
-  if (process.env.ANTHROPIC_API_KEY) {
-    return new ClaudeInvoiceExtractor();
-  }
-  return new LocalInvoiceExtractor();
-}
