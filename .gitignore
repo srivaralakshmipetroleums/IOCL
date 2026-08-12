@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+ioc-invoice-app/node_modules/
+
+# Environment
+.env
+.env*.local
+
+# Next.js
+ioc-invoice-app/.next/
+ioc-invoice-app/out/
+
+# Build
+ioc-invoice-app/build/
+*.tsbuildinfo
+
+# IDE
+.cursor/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+ioc-invoice-app/.vercel/
+
+# Logs
+*.log
