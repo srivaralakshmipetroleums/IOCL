@@ -1,0 +1,9 @@
+{
+  "name": "ioc-invoice-automation",
+  "private": true,
+  "scripts": {
+    "build": "cd ioc-invoice-app && npm install && npm run build",
+    "dev": "cd ioc-invoice-app && npm run dev",
+    "start": "cd ioc-invoice-app && npm start"
+  }
+}
