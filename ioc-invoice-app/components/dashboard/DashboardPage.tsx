@@ -1,150 +1,116 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { SectionTitle } from "@/components/dashboard/DashboardParts";
+import { KpiCards } from "@/components/dashboard/KpiCards";
+import { LineItemsTable, type LineItemRow } from "@/components/dashboard/LineItemsTable";
+import { ProductCharts } from "@/components/dashboard/ProductCharts";
+import { TimelineCharts } from "@/components/dashboard/TimelineCharts";
+import { getCurrentMonthRange, getMonthRange, monthInputValue } from "@/lib/dashboard/filters";
 
 interface DashboardSummary {
   invoiceCount: number;
   totalValue: number;
   totalQuantity: number;
   lineItemCount: number;
+  avgPerInvoice: number;
 }
 
 export function DashboardPage() {
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const initial = getCurrentMonthRange();
+  const [dateFrom, setDateFrom] = useState(initial.dateFrom);
+  const [dateTo, setDateTo] = useState(initial.dateTo);
 
-  const queryParams = new URLSearchParams();
-  if (dateFrom) queryParams.set("dateFrom", dateFrom);
-  if (dateTo) queryParams.set("dateTo", dateTo);
-  const qs = queryParams.toString();
+  const qs = useMemo(() => {
+    const params = new URLSearchParams({ dateFrom, dateTo });
+    return params.toString();
+  }, [dateFrom, dateTo]);
 
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
     queryKey: ["dashboard-summary", dateFrom, dateTo],
     queryFn: () => fetch(`/api/dashboard/summary?${qs}`).then((r) => r.json()),
   });
 
-  const { data: valueByDate } = useQuery({
+  const { data: valueByDate = [] } = useQuery<Array<{ date: string; value: number }>>({
     queryKey: ["dashboard-value", dateFrom, dateTo],
     queryFn: () => fetch(`/api/dashboard/value-by-date?${qs}`).then((r) => r.json()),
   });
 
-  const { data: productQuantity } = useQuery({
-    queryKey: ["dashboard-product-qty"],
-    queryFn: () => fetch("/api/dashboard/product-quantity").then((r) => r.json()),
+  const { data: quantityByDate = [] } = useQuery<Array<{ date: string; quantity: number }>>({
+    queryKey: ["dashboard-qty-date", dateFrom, dateTo],
+    queryFn: () => fetch(`/api/dashboard/quantity-by-date?${qs}`).then((r) => r.json()),
   });
 
-  const { data: monthlyCount } = useQuery({
-    queryKey: ["dashboard-monthly"],
-    queryFn: () => fetch("/api/dashboard/monthly-count").then((r) => r.json()),
+  const { data: productQuantity = [] } = useQuery<Array<{ product: string; quantity: number }>>({
+    queryKey: ["dashboard-product-qty", dateFrom, dateTo],
+    queryFn: () => fetch(`/api/dashboard/product-quantity?${qs}`).then((r) => r.json()),
   });
+
+  const { data: productValue = [] } = useQuery<Array<{ product: string; value: number }>>({
+    queryKey: ["dashboard-product-value", dateFrom, dateTo],
+    queryFn: () => fetch(`/api/dashboard/product-value?${qs}`).then((r) => r.json()),
+  });
+
+  const { data: lineItems = [], isLoading: lineItemsLoading } = useQuery<LineItemRow[]>({
+    queryKey: ["dashboard-line-items", dateFrom, dateTo],
+    queryFn: () => fetch(`/api/dashboard/line-items?${qs}`).then((r) => r.json()),
+  });
+
+  function handleMonthChange(value: string) {
+    if (!value) return;
+    const [year, month] = value.split("-").map(Number);
+    const range = getMonthRange(year, month);
+    setDateFrom(range.dateFrom);
+    setDateTo(range.dateTo);
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Invoice analytics and summary</p>
-      </div>
+    <div className="-mx-2 min-h-full rounded-lg bg-[#F0F4F8] px-2 pb-8">
+      <DashboardHeader dateFrom={dateFrom} />
 
-      <div className="flex gap-4">
-        <div className="space-y-2">
-          <Label>From</Label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <label htmlFor="period-month" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#1F4E79]">
+            Select Period
+          </label>
+          <input
+            id="period-month"
+            type="month"
+            value={monthInputValue(dateFrom)}
+            onChange={(e) => handleMonthChange(e.target.value)}
+            className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm outline-none focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/20"
+          />
         </div>
-        <div className="space-y-2">
-          <Label>To</Label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)
-        ) : (
-          <>
-            <KpiCard title="Total Invoices" value={String(summary?.invoiceCount ?? 0)} />
-            <KpiCard title="Total Value" value={formatCurrency(summary?.totalValue ?? 0)} />
-            <KpiCard title="Total Quantity (L)" value={String(summary?.totalQuantity ?? 0)} />
-            <KpiCard title="Line Items" value={String(summary?.lineItemCount ?? 0)} />
-          </>
+        {summary && (
+          <p className="text-sm text-gray-500">
+            {summary.lineItemCount} line items across {summary.invoiceCount} invoices
+          </p>
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Invoice Value by Date</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={valueByDate || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <SectionTitle>Key Metrics</SectionTitle>
+      <KpiCards
+        isLoading={isLoading}
+        invoiceCount={summary?.invoiceCount}
+        totalValue={summary?.totalValue}
+        totalQuantity={summary?.totalQuantity}
+        avgPerInvoice={summary?.avgPerInvoice}
+      />
 
-        <Card>
-          <CardHeader><CardTitle>Product Quantity</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={productQuantity || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="product" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="quantity" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <SectionTitle>Product Breakdown</SectionTitle>
+      <ProductCharts quantityData={productQuantity} valueData={productValue} />
 
-        <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Monthly Invoice Count</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyCount || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="count" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <SectionTitle>Timeline</SectionTitle>
+      <TimelineCharts valueByDate={valueByDate} quantityByDate={quantityByDate} />
+
+      <SectionTitle>All Line Items</SectionTitle>
+      <LineItemsTable items={lineItems} isLoading={lineItemsLoading} />
+
+      <footer className="mt-8 text-center text-xs text-gray-400">
+        IOC Invoice Automation &nbsp;•&nbsp; Sri Varalakshmi Petroleums
+      </footer>
     </div>
-  );
-}
-
-function KpiCard({ title, value }: { title: string; value: string }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
   );
 }

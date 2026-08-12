@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IOC Invoice Dashboard — June 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --blue-dark:  #1F4E79;
+    --blue-mid:   #2E75B6;
+    --blue-light: #D6E4F0;
+    --accent:     #F4A900;
+    --bg:         #F0F4F8;
+    --card-bg:    #FFFFFF;
+    --text:       #1A1A2E;
+    --muted:      #6B7280;
+    --green:      #10B981;
+    --red:        #EF4444;
+    --radius:     12px;
+    --shadow:     0 4px 20px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+    color: #fff; padding: 20px 32px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.5px; }
+  header .meta { font-size: 0.8rem; opacity: 0.75; margin-top: 4px; }
+  .logo { font-size: 2rem; }
+
+  /* ── Layout ── */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 20px; }
+  .section-title {
+    font-size: 1rem; font-weight: 700; color: var(--blue-dark);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 28px 0 14px; padding-left: 12px;
+    border-left: 4px solid var(--accent);
+  }
+
+  /* ── KPI Cards ── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+    margin-bottom: 8px;
+  }
+  .kpi-card {
+    background: var(--card-bg); border-radius: var(--radius);
+    padding: 20px 24px; box-shadow: var(--shadow);
+    border-top: 4px solid var(--blue-mid);
+    transition: transform .2s;
+  }
+  .kpi-card:hover { transform: translateY(-3px); }
+  .kpi-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .kpi-card .value { font-size: 2rem; font-weight: 800; color: var(--blue-dark); margin-top: 4px; }
+  .kpi-card .sub   { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+  /* ── Charts ── */
+  .chart-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px;
+  }
+  .chart-card {
+    background: var(--card-bg); border-radius: var(--radius);
+    padding: 20px 24px; box-shadow: var(--shadow);
+  }
+  .chart-card h3 {
+    font-size: 0.9rem; font-weight: 700; color: var(--blue-dark);
+    margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .chart-card canvas { max-height: 280px; }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--card-bg); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .table-controls {
+    padding: 16px 20px; display: flex; gap: 12px; align-items: center;
+    background: var(--blue-light); flex-wrap: wrap;
+  }
+  .table-controls input {
+    padding: 8px 14px; border: 1px solid #CBD5E1;
+    border-radius: 8px; font-size: 0.9rem; flex: 1; min-width: 200px;
+    outline: none;
+  }
+  .table-controls input:focus { border-color: var(--blue-mid); }
+  .table-controls select {
+    padding: 8px 14px; border: 1px solid #CBD5E1;
+    border-radius: 8px; font-size: 0.9rem; background: #fff; outline: none;
+  }
+  .badge {
+    background: var(--blue-dark); color: #fff; border-radius: 20px;
+    padding: 4px 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  thead th {
+    background: var(--blue-dark); color: #fff; padding: 12px 14px;
+    text-align: left; font-weight: 600; font-size: 0.78rem;
+    text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
+    user-select: none; white-space: nowrap;
+  }
+  thead th:hover { background: var(--blue-mid); }
+  thead th .sort-icon { margin-left: 4px; opacity: 0.6; }
+  tbody tr { border-bottom: 1px solid #EEF2F7; transition: background .15s; }
+  tbody tr:hover { background: var(--blue-light); }
+  tbody td { padding: 10px 14px; vertical-align: middle; }
+  .tag {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .tag-ebms  { background: #DBEAFE; color: #1E40AF; }
+  .tag-hsd   { background: #D1FAE5; color: #065F46; }
+  .tag-other { background: #FEF3C7; color: #92400E; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .no-data {
+    text-align: center; padding: 40px; color: var(--muted); font-size: 1rem;
+  }
+
+  footer {
+    text-align: center; padding: 24px; color: var(--muted); font-size: 0.78rem;
+  }
+
+  @media (max-width: 600px) {
+    header { flex-direction: column; gap: 8px; text-align: center; }
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">🛢️</div>
+  </div>
+  <div>
+    <h1>Indian Oil Corporation — Invoice Dashboard</h1>
+    <div class="meta">Period: June 2026 &nbsp;|&nbsp; Generated: 11 Aug 2026  18:06</div>
+  </div>
+  <div></div>
+</header>
+
+<div class="container">
+
+  <!-- KPIs -->
+  <div class="section-title">Key Metrics</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">Total Invoices</div>
+      <div class="value" id="kpi-invoices">—</div>
+      <div class="sub">unique bill numbers</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Total Invoice Value</div>
+      <div class="value" id="kpi-value">—</div>
+      <div class="sub">₹ for the month</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Total Quantity</div>
+      <div class="value" id="kpi-qty">—</div>
+      <div class="sub">Litres dispatched</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Avg. Invoice Value</div>
+      <div class="value" id="kpi-avg">—</div>
+      <div class="sub">₹ per invoice</div>
+    </div>
+  </div>
+
+  <!-- Charts row 1 -->
+  <div class="section-title">Product Breakdown</div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>Quantity by Product (Litres)</h3>
+      <canvas id="chartQtyProd"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Invoice Value by Product (₹)</h3>
+      <canvas id="chartValProd"></canvas>
+    </div>
+  </div>
+
+  <!-- Charts row 2 -->
+  <div class="section-title">Timeline</div>
+  <div class="chart-grid">
+    <div class="chart-card" style="grid-column: 1 / -1">
+      <h3>Daily Invoice Value Over Month (₹)</h3>
+      <canvas id="chartTimeline" style="max-height:260px"></canvas>
+    </div>
+  </div>
+  <div class="chart-grid" style="margin-top:20px">
+    <div class="chart-card" style="grid-column: 1 / -1">
+      <h3>Daily Quantity Dispatched (Litres)</h3>
+      <canvas id="chartQtyTimeline" style="max-height:220px"></canvas>
+    </div>
+  </div>
+
+  <!-- Detailed Table -->
+  <div class="section-title">All Line Items</div>
+  <div class="table-wrap">
+    <div class="table-controls">
+      <input type="text" id="searchBox" placeholder="🔍  Search by bill no, product, date…" oninput="filterTable()"/>
+      <select id="productFilter" onchange="filterTable()">
+        <option value="">All Products</option>
+      </select>
+      <span class="badge" id="rowCount">0 rows</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)">Date <span class="sort-icon">⇅</span></th>
+            <th onclick="sortTable(1)">Supplier <span class="sort-icon">⇅</span></th>
+            <th onclick="sortTable(2)">Bill No <span class="sort-icon">⇅</span></th>
+            <th onclick="sortTable(3)">Product <span class="sort-icon">⇅</span></th>
+            <th onclick="sortTable(4)" style="text-align:right">Invoice Value (₹) <span class="sort-icon">⇅</span></th>
+            <th onclick="sortTable(5)">HSN Code <span class="sort-icon">⇅</span></th>
+            <th onclick="sortTable(6)" style="text-align:right">Quantity (L) <span class="sort-icon">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>IOC Invoice Automation &nbsp;•&nbsp; Data as at 11 Aug 2026  18:06 &nbsp;•&nbsp; Sri Varalakshmi Petroleums</footer>
+
+<script>
+// ── Embedded data ─────────────────────────────────────────────────────────────
+const DATA = {"month_label": "June 2026", "year": 2026, "month": 6, "generated_at": "11 Aug 2026  18:06", "kpi": {"total_invoices": 8, "total_value": 12137420.6, "total_qty_l": 112000.0, "avg_per_invoice": 1517177.57}, "product_labels": ["EBMS", "HSD-BSVI"], "product_qty": [56000.0, 56000.0], "product_value": [6372016.96, 5765403.64], "product_count": [8, 8], "daily_dates": ["02-Jun-26", "05-Jun-26", "09-Jun-26", "11-Jun-26", "16-Jun-26", "20-Jun-26", "24-Jun-26", "26-Jun-26"], "daily_values": [1495512.82, 1538842.33, 1495512.82, 1538842.33, 1495512.82, 1538842.33, 1495512.82, 1538842.33], "daily_qty": [14000.0, 14000.0, 14000.0, 14000.0, 14000.0, 14000.0, 14000.0, 14000.0], "bills": [{"bill_no": "7007236698", "date": "02-Jun-26", "supplier": "Indian Oil Corporation Ltd", "total_value": 1495512.8199999998, "items": [{"product": "EBMS", "qty_l": 5000.0, "value": 568930.09, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 9000.0, "value": 926582.73, "hsn": "2710 19 44"}]}, {"bill_no": "7007399584", "date": "05-Jun-26", "supplier": "Indian Oil Corporation Ltd", "total_value": 1538842.33, "items": [{"product": "EBMS", "qty_l": 9000.0, "value": 1024074.15, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 5000.0, "value": 514768.18, "hsn": "2710 19 44"}]}, {"bill_no": "7007515582", "date": "09-Jun-26", "supplier": "Indian Oil Corporation Ltd", "total_value": 1495512.8199999998, "items": [{"product": "EBMS", "qty_l": 5000.0, "value": 568930.09, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 9000.0, "value": 926582.73, "hsn": "2710 19 44"}]}, {"bill_no": "7007578988", "date": "11-Jun-26", "supplier": "Indian Oil Corporation Ltd", "total_value": 1538842.33, "items": [{"product": "EBMS", "qty_l": 9000.0, "value": 1024074.15, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 5000.0, "value": 514768.18, "hsn": "2710 19 44"}]}, {"bill_no": "7007729450", "date": "16-Jun-26", "supplier": "Indian Oil Corporation Ltd", "total_value": 1495512.8199999998, "items": [{"product": "EBMS", "qty_l": 5000.0, "value": 568930.09, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 9000.0, "value": 926582.73, "hsn": "2710 19 44"}]}, {"bill_no": "7007865205", "date": "20-Jun-26", "supplier": "Indian Oil Corporation Ltd", "total_value": 1538842.33, "items": [{"product": "EBMS", "qty_l": 9000.0, "value": 1024074.15, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 5000.0, "value": 514768.18, "hsn": "2710 19 44"}]}, {"bill_no": "7007975391", "date": "24-Jun-26", "supplier": "Indian Oil Corporation Ltd, Guntakal Railfed Depot", "total_value": 1495512.8199999998, "items": [{"product": "EBMS", "qty_l": 5000.0, "value": 568930.09, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 9000.0, "value": 926582.73, "hsn": "2710 19 44"}]}, {"bill_no": "7008113826", "date": "26-Jun-26", "supplier": "Indian Oil Corporation Ltd", "total_value": 1538842.33, "items": [{"product": "EBMS", "qty_l": 9000.0, "value": 1024074.15, "hsn": "2710 12 42"}, {"product": "HSD-BSVI", "qty_l": 5000.0, "value": 514768.18, "hsn": "2710 19 44"}]}], "all_items": [{"id": 15, "message_id": "19e86d4782c16638", "attachment_name": "AC4 Inv.- 7007236698 by IndianOil Corporation Ltd.", "bill_no": "7007236698", "invoice_date": "02-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "EBMS", "invoice_value": 568930.09, "hsn_code": "2710 12 42", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"02-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007236698\", \"product\": \"EBMS\", \"invoice_value\": 568930.09, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:15:00.074897"}, {"id": 16, "message_id": "19e86d4782c16638", "attachment_name": "AC4 Inv.- 7007236698 by IndianOil Corporation Ltd.", "bill_no": "7007236698", "invoice_date": "02-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "HSD-BSVI", "invoice_value": 926582.73, "hsn_code": "2710 19 44", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"02-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007236698\", \"product\": \"HSD-BSVI\", \"invoice_value\": 926582.73, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:15:00.074897"}, {"id": 13, "message_id": "19e962e4d3b77bbc", "attachment_name": "AC4 Inv.- 7007399584 by IndianOil Corporation Ltd.", "bill_no": "7007399584", "invoice_date": "05-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "EBMS", "invoice_value": 1024074.15, "hsn_code": "2710 12 42", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"05-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007399584\", \"product\": \"EBMS\", \"invoice_value\": 1024074.15, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:14:53.888236"}, {"id": 14, "message_id": "19e962e4d3b77bbc", "attachment_name": "AC4 Inv.- 7007399584 by IndianOil Corporation Ltd.", "bill_no": "7007399584", "invoice_date": "05-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "HSD-BSVI", "invoice_value": 514768.18, "hsn_code": "2710 19 44", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"05-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007399584\", \"product\": \"HSD-BSVI\", \"invoice_value\": 514768.18, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:14:53.888236"}, {"id": 11, "message_id": "19eaac3afcb44db3", "attachment_name": "AC4 Inv.- 7007515582 by IndianOil Corporation Ltd.", "bill_no": "7007515582", "invoice_date": "09-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "EBMS", "invoice_value": 568930.09, "hsn_code": "2710 12 42", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"09-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007515582\", \"product\": \"EBMS\", \"invoice_value\": 568930.09, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:14:48.028300"}, {"id": 12, "message_id": "19eaac3afcb44db3", "attachment_name": "AC4 Inv.- 7007515582 by IndianOil Corporation Ltd.", "bill_no": "7007515582", "invoice_date": "09-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "HSD-BSVI", "invoice_value": 926582.73, "hsn_code": "2710 19 44", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"09-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007515582\", \"product\": \"HSD-BSVI\", \"invoice_value\": 926582.73, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:14:48.028300"}, {"id": 9, "message_id": "19eb51c86d8876f8", "attachment_name": "AC4 Inv.- 7007578988 by IndianOil Corporation Ltd.", "bill_no": "7007578988", "invoice_date": "11-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "EBMS", "invoice_value": 1024074.15, "hsn_code": "2710 12 42", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"11-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007578988\", \"product\": \"EBMS\", \"invoice_value\": 1024074.15, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:14:41.715638"}, {"id": 10, "message_id": "19eb51c86d8876f8", "attachment_name": "AC4 Inv.- 7007578988 by IndianOil Corporation Ltd.", "bill_no": "7007578988", "invoice_date": "11-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "HSD-BSVI", "invoice_value": 514768.18, "hsn_code": "2710 19 44", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"11-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007578988\", \"product\": \"HSD-BSVI\", \"invoice_value\": 514768.18, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:14:41.715638"}, {"id": 7, "message_id": "19eceb5ad4b034b0", "attachment_name": "AC4 Inv.- 7007729450 by IndianOil Corporation Ltd.", "bill_no": "7007729450", "invoice_date": "16-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "EBMS", "invoice_value": 568930.09, "hsn_code": "2710 12 42", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"16-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007729450\", \"product\": \"EBMS\", \"invoice_value\": 568930.09, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:14:35.708706"}, {"id": 8, "message_id": "19eceb5ad4b034b0", "attachment_name": "AC4 Inv.- 7007729450 by IndianOil Corporation Ltd.", "bill_no": "7007729450", "invoice_date": "16-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "HSD-BSVI", "invoice_value": 926582.73, "hsn_code": "2710 19 44", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"16-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007729450\", \"product\": \"HSD-BSVI\", \"invoice_value\": 926582.73, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:14:35.708706"}, {"id": 5, "message_id": "19ee3631f8ea7b3f", "attachment_name": "AC4 Inv.- 7007865205 by IndianOil Corporation Ltd.", "bill_no": "7007865205", "invoice_date": "20-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "EBMS", "invoice_value": 1024074.15, "hsn_code": "2710 12 42", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"20-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007865205\", \"product\": \"EBMS\", \"invoice_value\": 1024074.15, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:14:29.452214"}, {"id": 6, "message_id": "19ee3631f8ea7b3f", "attachment_name": "AC4 Inv.- 7007865205 by IndianOil Corporation Ltd.", "bill_no": "7007865205", "invoice_date": "20-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "HSD-BSVI", "invoice_value": 514768.18, "hsn_code": "2710 19 44", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"20-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7007865205\", \"product\": \"HSD-BSVI\", \"invoice_value\": 514768.18, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:14:29.452214"}, {"id": 3, "message_id": "19ef7c0da2f796a0", "attachment_name": "AC4 Inv.- 7007975391 by IndianOil Corporation Ltd.", "bill_no": "7007975391", "invoice_date": "24-Jun-26", "supplier": "Indian Oil Corporation Ltd, Guntakal Railfed Depot", "product": "EBMS", "invoice_value": 568930.09, "hsn_code": "2710 12 42", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"24-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd, Guntakal Railfed Depot\", \"bill_no\": \"7007975391\", \"product\": \"EBMS\", \"invoice_value\": 568930.09, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:14:21.756087"}, {"id": 4, "message_id": "19ef7c0da2f796a0", "attachment_name": "AC4 Inv.- 7007975391 by IndianOil Corporation Ltd.", "bill_no": "7007975391", "invoice_date": "24-Jun-26", "supplier": "Indian Oil Corporation Ltd, Guntakal Railfed Depot", "product": "HSD-BSVI", "invoice_value": 926582.73, "hsn_code": "2710 19 44", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"24-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd, Guntakal Railfed Depot\", \"bill_no\": \"7007975391\", \"product\": \"HSD-BSVI\", \"invoice_value\": 926582.73, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:14:21.756087"}, {"id": 1, "message_id": "19f0267a77da588c", "attachment_name": "AC4 Inv.- 7008113826 by IndianOil Corporation Ltd.", "bill_no": "7008113826", "invoice_date": "26-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "EBMS", "invoice_value": 1024074.15, "hsn_code": "2710 12 42", "quantity_litres": 9000.0, "measure": "Litres", "raw_json": "{\"date\": \"26-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7008113826\", \"product\": \"EBMS\", \"invoice_value\": 1024074.15, \"hsn_code\": \"2710 12 42\", \"measure\": \"Litres\", \"quantity_litres\": 9000.0}", "created_at": "2026-08-11T10:14:10.197261"}, {"id": 2, "message_id": "19f0267a77da588c", "attachment_name": "AC4 Inv.- 7008113826 by IndianOil Corporation Ltd.", "bill_no": "7008113826", "invoice_date": "26-Jun-26", "supplier": "Indian Oil Corporation Ltd", "product": "HSD-BSVI", "invoice_value": 514768.18, "hsn_code": "2710 19 44", "quantity_litres": 5000.0, "measure": "Litres", "raw_json": "{\"date\": \"26-Jun-26\", \"supplier\": \"Indian Oil Corporation Ltd\", \"bill_no\": \"7008113826\", \"product\": \"HSD-BSVI\", \"invoice_value\": 514768.18, \"hsn_code\": \"2710 19 44\", \"measure\": \"Litres\", \"quantity_litres\": 5000.0}", "created_at": "2026-08-11T10:14:10.197261"}]};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt  = n => n == null ? '—' : '₹' + Number(n).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = n => n == null ? '—' : Number(n).toLocaleString('en-IN');
+const COLORS = ['#1F4E79','#2E75B6','#F4A900','#10B981','#EF4444','#8B5CF6','#EC4899'];
+
+function productTag(prod) {
+  const p = (prod||'').toUpperCase();
+  if (p.includes('EBMS')) return `<span class="tag tag-ebms">EBMS</span>`;
+  if (p.includes('HSD'))  return `<span class="tag tag-hsd">HSD-BSVI</span>`;
+  return `<span class="tag tag-other">${prod}</span>`;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+document.getElementById('kpi-invoices').textContent = DATA.kpi.total_invoices.toLocaleString('en-IN');
+document.getElementById('kpi-value').textContent    = '₹' + (DATA.kpi.total_value/100000).toFixed(2) + 'L';
+document.getElementById('kpi-qty').textContent      = (DATA.kpi.total_qty_l/1000).toFixed(1) + ' KL';
+document.getElementById('kpi-avg').textContent      = fmt(DATA.kpi.avg_per_invoice);
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, sans-serif";
+Chart.defaults.font.size   = 12;
+
+// Qty by Product (doughnut)
+new Chart(document.getElementById('chartQtyProd'), {
+  type: 'doughnut',
+  data: {
+    labels: DATA.product_labels,
+    datasets: [{ data: DATA.product_qty, backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmtN(ctx.raw)} L` } }
+    }
+  }
+});
+
+// Value by Product (bar)
+new Chart(document.getElementById('chartValProd'), {
+  type: 'bar',
+  data: {
+    labels: DATA.product_labels,
+    datasets: [{
+      label: 'Invoice Value (₹)', data: DATA.product_value,
+      backgroundColor: COLORS, borderRadius: 6, borderSkipped: false
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` } }
+    },
+    scales: {
+      y: { ticks: { callback: v => '₹' + (v/100000).toFixed(1)+'L' }, grid: { color: '#EEF2F7' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Daily Value timeline
+new Chart(document.getElementById('chartTimeline'), {
+  type: 'line',
+  data: {
+    labels: DATA.daily_dates,
+    datasets: [{
+      label: 'Invoice Value (₹)', data: DATA.daily_values,
+      borderColor: '#1F4E79', backgroundColor: 'rgba(31,78,121,0.12)',
+      fill: true, tension: 0.3, pointRadius: 5, pointHoverRadius: 8,
+      pointBackgroundColor: '#F4A900', borderWidth: 2
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` } }
+    },
+    scales: {
+      y: { ticks: { callback: v => '₹'+(v/100000).toFixed(2)+'L' }, grid: { color: '#EEF2F7' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Daily Qty timeline
+new Chart(document.getElementById('chartQtyTimeline'), {
+  type: 'bar',
+  data: {
+    labels: DATA.daily_dates,
+    datasets: [{
+      label: 'Quantity (L)', data: DATA.daily_qty,
+      backgroundColor: 'rgba(46,117,182,0.7)', borderRadius: 4
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${fmtN(ctx.raw)} L` } }
+    },
+    scales: {
+      y: { ticks: { callback: v => fmtN(v)+' L' }, grid: { color: '#EEF2F7' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+const allItems = DATA.all_items;
+let   filtered = [...allItems];
+let   sortCol  = 0, sortAsc = true;
+
+// Populate product filter
+const prods = [...new Set(allItems.map(r => r.product).filter(Boolean))].sort();
+const sel   = document.getElementById('productFilter');
+prods.forEach(p => { const o = document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+
+function renderTable(data) {
+  const tbody = document.getElementById('tableBody');
+  document.getElementById('rowCount').textContent = data.length + ' rows';
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data">No data found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.invoice_date||'—'}</td>
+      <td>${r.supplier||'—'}</td>
+      <td style="font-family:monospace;font-size:.85rem">${r.bill_no||'—'}</td>
+      <td>${productTag(r.product)}</td>
+      <td class="num">${fmt(r.invoice_value)}</td>
+      <td style="font-family:monospace">${r.hsn_code||'—'}</td>
+      <td class="num">${fmtN(r.quantity_litres)}</td>
+    </tr>`).join('');
+}
+
+function filterTable() {
+  const q    = document.getElementById('searchBox').value.toLowerCase();
+  const prod = document.getElementById('productFilter').value;
+  filtered = allItems.filter(r => {
+    const text = [r.invoice_date,r.supplier,r.bill_no,r.product,r.hsn_code].join(' ').toLowerCase();
+    return (!q || text.includes(q)) && (!prod || r.product === prod);
+  });
+  applySort();
+}
+
+function sortTable(col) {
+  if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+  applySort();
+}
+
+function applySort() {
+  const keys = ['invoice_date','supplier','bill_no','product','invoice_value','hsn_code','quantity_litres'];
+  filtered.sort((a,b) => {
+    const av = a[keys[sortCol]] ?? '', bv = b[keys[sortCol]] ?? '';
+    if (typeof av === 'number') return sortAsc ? av-bv : bv-av;
+    return sortAsc ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  });
+  renderTable(filtered);
+}
+
+renderTable(allItems);
+</script>
+</body>
+</html>
