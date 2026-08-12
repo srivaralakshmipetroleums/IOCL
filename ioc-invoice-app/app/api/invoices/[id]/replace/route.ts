@@ -17,6 +17,8 @@ export async function POST(
   const supabase = await createServiceClient();
   await supabase.from("invoices").update({ status: "REPLACED" }).eq("id", invoiceId);
 
-  const result = await processingService.processItem(jobItemId, storagePath, invoiceId);
+  const result = await processingService.processItem(jobItemId, storagePath, {
+    replaceInvoiceId: invoiceId,
+  });
   return NextResponse.json(result);
 }

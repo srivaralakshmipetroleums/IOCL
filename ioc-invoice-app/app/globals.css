@@ -4,24 +4,46 @@
 
 @layer base {
   :root {
-    --background: 210 33% 97%;
-    --foreground: 240 28% 14%;
+    /* IndianOil Corporate Design Tokens */
+    --ioc-navy: #003b7a;
+    --ioc-dark-navy: #002b5c;
+    --ioc-blue: #0057a8;
+    --ioc-mid-blue: #1769aa;
+    --ioc-orange: #ff8c00;
+    --ioc-orange-light: #fff0d6;
+    --ioc-page-bg: #f3f7fc;
+    --ioc-section-bg: #f8fbff;
+    --ioc-white: #ffffff;
+    --ioc-border: #d9e3f0;
+    --ioc-text: #102a43;
+    --ioc-text-secondary: #52667a;
+    --ioc-success: #16a34a;
+    --ioc-success-light: #e8f7ee;
+    --ioc-warning: #f59e0b;
+    --ioc-warning-light: #fff7e6;
+    --ioc-error: #dc2626;
+    --ioc-error-light: #feecec;
+    --ioc-processing-light: #eaf3ff;
+
+    /* Shadcn mappings → IOC palette */
+    --background: 213 33% 97%;
+    --foreground: 210 61% 16%;
     --card: 0 0% 100%;
-    --card-foreground: 240 28% 14%;
-    --primary: 207 59% 30%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 207 59% 30%;
-    --radius: 0.5rem;
+    --card-foreground: 210 61% 16%;
+    --primary: 210 100% 24%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 33% 97%;
+    --secondary-foreground: 210 61% 16%;
+    --muted: 213 33% 97%;
+    --muted-foreground: 210 20% 40%;
+    --accent: 33 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 89%;
+    --input: 214 32% 89%;
+    --ring: 210 100% 24%;
+    --radius: 0.625rem;
   }
 }
 
@@ -30,6 +52,28 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-ioc-page text-ioc-text antialiased;
+  }
+}
+
+@layer components {
+  .ioc-header-gradient {
+    background: linear-gradient(90deg, var(--ioc-dark-navy) 0%, var(--ioc-navy) 45%, var(--ioc-blue) 100%);
+  }
+
+  .ioc-card {
+    @apply rounded-[10px] border border-ioc-border bg-white shadow-sm;
+  }
+
+  .ioc-page-title {
+    @apply text-2xl font-bold text-ioc-navy md:text-[26px];
+  }
+
+  .ioc-page-title-accent {
+    @apply mt-1 h-0.5 w-12 rounded-full bg-ioc-orange;
+  }
+
+  .ioc-section-heading {
+    @apply text-base font-semibold text-ioc-navy;
   }
 }

@@ -79,19 +79,19 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
   ];
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
-      <div className="flex flex-wrap items-center gap-3 bg-[#D6E4F0] px-5 py-4">
+    <div className="ioc-card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-3 border-b border-ioc-border bg-ioc-section px-5 py-4">
         <input
           type="text"
           placeholder="Search by bill no, product, date…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-w-[200px] flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-[#2E75B6]"
+          className="min-w-[200px] flex-1 rounded-[10px] border border-ioc-border bg-white px-3.5 py-2 text-sm outline-none focus:border-ioc-blue focus:ring-2 focus:ring-ioc-blue/20"
         />
         <select
           value={productFilter}
           onChange={(e) => setProductFilter(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-[#2E75B6]"
+          className="rounded-[10px] border border-ioc-border bg-white px-3.5 py-2 text-sm outline-none focus:border-ioc-blue"
         >
           <option value="">All Products</option>
           {products.map((p) => (
@@ -100,7 +100,7 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
             </option>
           ))}
         </select>
-        <span className="whitespace-nowrap rounded-full bg-[#1F4E79] px-3 py-1 text-xs font-semibold text-white">
+        <span className="whitespace-nowrap rounded-full bg-ioc-navy px-3 py-1 text-xs font-semibold text-white">
           {sorted.length} rows
         </span>
       </div>
@@ -113,7 +113,7 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className={`cursor-pointer select-none whitespace-nowrap bg-[#1F4E79] px-3.5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white hover:bg-[#2E75B6] ${col.align === "right" ? "text-right" : ""}`}
+                  className={`cursor-pointer select-none whitespace-nowrap bg-ioc-navy px-3.5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white hover:bg-ioc-blue ${col.align === "right" ? "text-right" : ""}`}
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.label}
@@ -126,19 +126,22 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-gray-400">
+                <td colSpan={7} className="py-10 text-center text-ioc-muted">
                   Loading line items…
                 </td>
               </tr>
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-gray-400">
+                <td colSpan={7} className="py-10 text-center text-ioc-muted">
                   No data found for this period.
                 </td>
               </tr>
             ) : (
               sorted.map((row) => (
-                <tr key={row.id} className="border-b border-slate-100 transition-colors hover:bg-[#D6E4F0]/50">
+                <tr
+                  key={row.id}
+                  className="border-b border-ioc-border transition-colors hover:bg-ioc-section"
+                >
                   <td className="px-3.5 py-2.5">{row.invoice_date}</td>
                   <td className="max-w-[200px] truncate px-3.5 py-2.5" title={row.supplier}>
                     {row.supplier}

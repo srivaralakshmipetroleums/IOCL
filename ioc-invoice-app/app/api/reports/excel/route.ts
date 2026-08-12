@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     product: body.product,
   });
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="invoice-report-${new Date().toISOString().slice(0, 10)}.xlsx"`,

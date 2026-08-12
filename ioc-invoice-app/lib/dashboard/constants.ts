@@ -1,19 +1,23 @@
-export const IOC_COLORS = {
-  blueDark: "#1F4E79",
-  blueMid: "#2E75B6",
-  blueLight: "#D6E4F0",
-  accent: "#F4A900",
-  bg: "#F0F4F8",
-  green: "#10B981",
-  red: "#EF4444",
-};
+/** Chart palette — maps to IOC corporate colours */
+export const IOC_CHART = {
+  primary: "var(--ioc-navy)",
+  secondary: "var(--ioc-blue)",
+  accent: "var(--ioc-orange)",
+  supporting: "var(--ioc-mid-blue)",
+  ebms: "var(--ioc-navy)",
+  hsd: "var(--ioc-orange)",
+} as const;
 
 export const CHART_COLORS = [
-  IOC_COLORS.blueDark,
-  IOC_COLORS.blueMid,
-  IOC_COLORS.accent,
-  IOC_COLORS.green,
-  IOC_COLORS.red,
-  "#8B5CF6",
-  "#EC4899",
+  IOC_CHART.primary,
+  IOC_CHART.accent,
+  IOC_CHART.secondary,
+  IOC_CHART.supporting,
 ];
+
+export function productChartColor(product: string, index: number): string {
+  const upper = product.toUpperCase();
+  if (upper.includes("EBMS")) return IOC_CHART.ebms;
+  if (upper.includes("HSD")) return IOC_CHART.hsd;
+  return CHART_COLORS[index % CHART_COLORS.length];
+}

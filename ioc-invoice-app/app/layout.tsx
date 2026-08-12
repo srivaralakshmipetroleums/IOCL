@@ -6,8 +6,8 @@ import { Providers } from "@/components/providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "IOC Invoice Management",
-  description: "IOC Invoice Management & Reporting System",
+  title: "IOC Invoice Management & Reporting System",
+  description: "Indian Oil Corporation Limited — Invoice Management & Reporting",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

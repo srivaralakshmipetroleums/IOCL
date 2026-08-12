@@ -1,14 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import { SectionTitle } from "@/components/dashboard/DashboardParts";
 import { KpiCards } from "@/components/dashboard/KpiCards";
 import { LineItemsTable, type LineItemRow } from "@/components/dashboard/LineItemsTable";
-import { ProductCharts } from "@/components/dashboard/ProductCharts";
-import { TimelineCharts } from "@/components/dashboard/TimelineCharts";
-import { getCurrentMonthRange, getMonthRange, monthInputValue } from "@/lib/dashboard/filters";
+import { MonthlyCountChart } from "@/components/dashboard/MonthlyCountChart";
+import { ProductQuantityDonut, ProductValueBar } from "@/components/dashboard/ProductCharts";
+import { RecentInvoicesTable } from "@/components/dashboard/RecentInvoicesTable";
+import { TimelineCharts, QuantityTimelineChart } from "@/components/dashboard/TimelineCharts";
+import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
+import { PageTitle } from "@/components/layout/PageTitle";
+import { Button } from "@/components/ui/button";
+import {
+  getCurrentMonthRange,
+  getMonthRange,
+  monthInputValue,
+  monthLabelFromRange,
+} from "@/lib/dashboard/filters";
 
 interface DashboardSummary {
   invoiceCount: number;
@@ -18,19 +28,44 @@ interface DashboardSummary {
   avgPerInvoice: number;
 }
 
+function getPrevMonthRange(dateFrom: string) {
+  const [year, month] = dateFrom.split("-").map(Number);
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  return getMonthRange(prevYear, prevMonth);
+}
+
+function calcTrend(current: number, previous: number, vsLabel: string) {
+  if (previous === 0) return undefined;
+  return {
+    percent: ((current - previous) / previous) * 100,
+    label: vsLabel,
+  };
+}
+
 export function DashboardPage() {
   const initial = getCurrentMonthRange();
   const [dateFrom, setDateFrom] = useState(initial.dateFrom);
   const [dateTo, setDateTo] = useState(initial.dateTo);
+  const periodCtx = useDashboardPeriod();
+  const queryClient = useQueryClient();
 
-  const qs = useMemo(() => {
-    const params = new URLSearchParams({ dateFrom, dateTo });
-    return params.toString();
-  }, [dateFrom, dateTo]);
+  const qs = useMemo(() => new URLSearchParams({ dateFrom, dateTo }).toString(), [dateFrom, dateTo]);
+  const prevRange = useMemo(() => getPrevMonthRange(dateFrom), [dateFrom]);
+  const prevQs = useMemo(
+    () => new URLSearchParams({ dateFrom: prevRange.dateFrom, dateTo: prevRange.dateTo }).toString(),
+    [prevRange]
+  );
+  const vsLabel = `vs ${monthLabelFromRange(prevRange.dateFrom)}`;
 
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
     queryKey: ["dashboard-summary", dateFrom, dateTo],
     queryFn: () => fetch(`/api/dashboard/summary?${qs}`).then((r) => r.json()),
+  });
+
+  const { data: prevSummary } = useQuery<DashboardSummary>({
+    queryKey: ["dashboard-summary", prevRange.dateFrom, prevRange.dateTo],
+    queryFn: () => fetch(`/api/dashboard/summary?${prevQs}`).then((r) => r.json()),
   });
 
   const { data: valueByDate = [] } = useQuery<Array<{ date: string; value: number }>>({
@@ -64,53 +99,84 @@ export function DashboardPage() {
     const range = getMonthRange(year, month);
     setDateFrom(range.dateFrom);
     setDateTo(range.dateTo);
+    periodCtx?.setPeriodFromDate(range.dateFrom);
   }
 
-  return (
-    <div className="-mx-2 min-h-full rounded-lg bg-[#F0F4F8] px-2 pb-8">
-      <DashboardHeader dateFrom={dateFrom} />
+  function handleRefresh() {
+    queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-value"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-qty-date"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-product-qty"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-product-value"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-line-items"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-monthly"] });
+    queryClient.invalidateQueries({ queryKey: ["recent-invoices"] });
+  }
 
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <label htmlFor="period-month" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#1F4E79]">
-            Select Period
-          </label>
-          <input
-            id="period-month"
-            type="month"
-            value={monthInputValue(dateFrom)}
-            onChange={(e) => handleMonthChange(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm outline-none focus:border-[#2E75B6] focus:ring-2 focus:ring-[#2E75B6]/20"
-          />
+  const trends = prevSummary
+    ? {
+        invoices: calcTrend(summary?.invoiceCount ?? 0, prevSummary.invoiceCount, vsLabel),
+        value: calcTrend(summary?.totalValue ?? 0, prevSummary.totalValue, vsLabel),
+        quantity: calcTrend(summary?.totalQuantity ?? 0, prevSummary.totalQuantity, vsLabel),
+        lineItems: calcTrend(summary?.lineItemCount ?? 0, prevSummary.lineItemCount, vsLabel),
+      }
+    : undefined;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <PageTitle>Dashboard</PageTitle>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label
+              htmlFor="period-month"
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ioc-muted"
+            >
+              Period
+            </label>
+            <input
+              id="period-month"
+              type="month"
+              value={monthInputValue(dateFrom)}
+              onChange={(e) => handleMonthChange(e.target.value)}
+              className="rounded-[10px] border border-ioc-border bg-white px-3.5 py-2 text-sm shadow-sm outline-none focus:border-ioc-blue focus:ring-2 focus:ring-ioc-blue/20"
+            />
+          </div>
+          <Button onClick={handleRefresh} className="mb-0.5">
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
         </div>
-        {summary && (
-          <p className="text-sm text-gray-500">
-            {summary.lineItemCount} line items across {summary.invoiceCount} invoices
-          </p>
-        )}
       </div>
 
-      <SectionTitle>Key Metrics</SectionTitle>
       <KpiCards
         isLoading={isLoading}
         invoiceCount={summary?.invoiceCount}
         totalValue={summary?.totalValue}
         totalQuantity={summary?.totalQuantity}
-        avgPerInvoice={summary?.avgPerInvoice}
+        lineItemCount={summary?.lineItemCount}
+        trends={trends}
       />
 
-      <SectionTitle>Product Breakdown</SectionTitle>
-      <ProductCharts quantityData={productQuantity} valueData={productValue} />
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <TimelineCharts valueByDate={valueByDate} />
+        </div>
+        <ProductQuantityDonut quantityData={productQuantity} />
+      </div>
 
-      <SectionTitle>Timeline</SectionTitle>
-      <TimelineCharts valueByDate={valueByDate} quantityByDate={quantityByDate} />
+      <ProductValueBar valueData={productValue} />
+
+      <QuantityTimelineChart quantityByDate={quantityByDate} />
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <RecentInvoicesTable />
+        <MonthlyCountChart />
+      </div>
 
       <SectionTitle>All Line Items</SectionTitle>
       <LineItemsTable items={lineItems} isLoading={lineItemsLoading} />
-
-      <footer className="mt-8 text-center text-xs text-gray-400">
-        IOC Invoice Automation &nbsp;•&nbsp; Sri Varalakshmi Petroleums
-      </footer>
     </div>
   );
 }
