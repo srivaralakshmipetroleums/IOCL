@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { PageTitle } from "@/components/layout/PageTitle";
 import { MONTHS, getYearOptions } from "@/lib/invoices/period-utils";
 
 interface GmailStatus {
@@ -86,10 +87,10 @@ export function GmailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Gmail Invoice Fetch</h1>
-        <p className="text-muted-foreground">
+        <PageTitle>Gmail Invoice Fetch</PageTitle>
+        <p className="mt-2 text-sm text-ioc-muted">
           Fetch IOC invoice PDFs from Gmail and run them through the extraction pipeline
         </p>
       </div>
@@ -127,7 +128,7 @@ export function GmailPage() {
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {!status?.connected ? (
               <Button onClick={handleConnect} disabled={!status?.oauthConfigured}>
                 Connect Gmail

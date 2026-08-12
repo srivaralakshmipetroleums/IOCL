@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
+import { PageTitle } from "@/components/layout/PageTitle";
 import { PeriodSelector } from "./PeriodSelector";
 import type { DatePeriod } from "@/lib/invoices/period-utils";
 import { getMonthDateRange } from "@/lib/invoices/period-utils";
@@ -168,10 +169,10 @@ export function UploadPage() {
   const isComplete = jobStatus?.job?.status === "COMPLETED" || jobStatus?.job?.status === "FAILED";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Upload IOC Invoice PDFs</h1>
-        <p className="text-muted-foreground">Drag and drop or browse to upload invoice PDFs</p>
+        <PageTitle>Upload IOC Invoice PDFs</PageTitle>
+        <p className="mt-2 text-sm text-ioc-muted">Drag and drop or browse to upload invoice PDFs</p>
       </div>
 
       <Card>
@@ -231,7 +232,7 @@ export function UploadPage() {
           <div
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
-            className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors hover:border-primary"
+            className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors hover:border-ioc-blue sm:p-12"
           >
             <Upload className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="mb-2 text-lg font-medium">Drag and drop PDF files here</p>

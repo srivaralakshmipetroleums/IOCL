@@ -124,10 +124,10 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <PageTitle>Dashboard</PageTitle>
 
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
           <div>
             <label
               htmlFor="period-month"
@@ -143,7 +143,7 @@ export function DashboardPage() {
               className="rounded-[10px] border border-ioc-border bg-white px-3.5 py-2 text-sm shadow-sm outline-none focus:border-ioc-blue focus:ring-2 focus:ring-ioc-blue/20"
             />
           </div>
-          <Button onClick={handleRefresh} className="mb-0.5">
+          <Button onClick={handleRefresh} className="w-full sm:w-auto sm:mb-0.5">
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>

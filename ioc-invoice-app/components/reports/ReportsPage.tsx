@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageTitle } from "@/components/layout/PageTitle";
 import { Download } from "lucide-react";
 
 export function ReportsPage() {
@@ -40,10 +41,10 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Reports</h1>
-        <p className="text-muted-foreground">Generate Excel reports in MS HSD format</p>
+        <PageTitle>Reports</PageTitle>
+        <p className="mt-2 text-sm text-ioc-muted">Generate Excel reports in MS HSD format</p>
       </div>
 
       <Card>
@@ -54,7 +55,7 @@ export function ReportsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Date From</Label>
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -73,7 +74,7 @@ export function ReportsPage() {
             </div>
           </div>
 
-          <Button onClick={handleExport} disabled={loading}>
+          <Button onClick={handleExport} disabled={loading} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             {loading ? "Generating..." : "Download Excel Report"}
           </Button>

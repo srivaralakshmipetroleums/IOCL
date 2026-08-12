@@ -49,8 +49,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-ioc-page">
-      <header className="ioc-header-gradient px-6 py-5 text-white">
-        <div className="mx-auto flex max-w-md items-center gap-4">
+      <header className="ioc-header-gradient px-4 py-4 text-white sm:px-6 sm:py-5">
+        <div className="mx-auto flex max-w-md items-center gap-3 sm:gap-4">
           <IndianOilLogo size="lg" />
           <div>
             <p className="font-semibold">Indian Oil Corporation Limited</p>

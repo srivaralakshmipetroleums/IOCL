@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageTitle } from "@/components/layout/PageTitle";
 import { LogOut, Sparkles, RefreshCw } from "lucide-react";
 
 const EXTRACTION_MODE_KEY = "ioc-extraction-mode";
@@ -53,10 +54,10 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Account and application settings</p>
+        <PageTitle>Settings</PageTitle>
+        <p className="mt-2 text-sm text-ioc-muted">Account and application settings</p>
       </div>
 
       <Card>
