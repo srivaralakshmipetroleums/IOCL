@@ -52,7 +52,7 @@ export function AppHeader() {
           <IndianOilLogo size="lg" className="shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold leading-tight sm:text-sm md:text-base">
-              Indian Oil Corporation Limited
+              Sri Varalakshmi Petroleums
             </p>
             <p className="hidden truncate text-xs text-white/80 sm:block md:text-sm">
               IOC Invoice Management &amp; Reporting System

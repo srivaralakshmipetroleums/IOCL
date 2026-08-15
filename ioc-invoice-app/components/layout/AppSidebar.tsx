@@ -163,8 +163,12 @@ export function AppSidebar() {
             <IndianOilLogo size="sm" />
             {!collapsed && (
               <div className="min-w-0">
-                <p className="truncate text-xs font-semibold">The Energy of India</p>
-                <p className="text-[10px] text-white/70">IndianOil</p>
+                <p className="truncate text-xs font-semibold">Sri Varalakshmi Petroleums</p>
+                <p className="text-[10px] leading-snug text-white/70">
+                  GuguduRoad, Narpala
+                  <br />
+                  Anantapur Dist-515425
+                </p>
               </div>
             )}
           </div>

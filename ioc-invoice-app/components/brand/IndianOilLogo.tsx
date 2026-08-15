@@ -28,7 +28,7 @@ export function IndianOilLogo({ className, size = "md" }: IndianOilLogoProps) {
       <div className={cn("relative shrink-0", s.box, className)}>
         <Image
           src="/branding/indianoil-logo.png"
-          alt="IndianOil"
+          alt="Sri Varalakshmi Petroleums"
           fill
           className="object-contain"
           onError={() => setImgError(true)}
@@ -46,9 +46,9 @@ export function IndianOilLogo({ className, size = "md" }: IndianOilLogoProps) {
         s.text,
         className
       )}
-      aria-label="IndianOil"
+      aria-label="Sri Varalakshmi Petroleums"
     >
-      IOCL
+      SVP
     </div>
   );
 }

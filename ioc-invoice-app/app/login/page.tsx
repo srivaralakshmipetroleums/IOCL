@@ -53,7 +53,7 @@ export default function LoginPage() {
         <div className="mx-auto flex max-w-md items-center gap-3 sm:gap-4">
           <IndianOilLogo size="lg" />
           <div>
-            <p className="font-semibold">Indian Oil Corporation Limited</p>
+            <p className="font-semibold">Sri Varalakshmi Petroleums</p>
             <p className="text-sm text-white/80">IOC Invoice Management &amp; Reporting System</p>
           </div>
         </div>

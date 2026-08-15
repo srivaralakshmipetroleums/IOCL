@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "IOC Invoice Management & Reporting System",
-  description: "Indian Oil Corporation Limited — Invoice Management & Reporting",
+  description: "Sri Varalakshmi Petroleums — IOCL Invoice Management & Reporting",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
