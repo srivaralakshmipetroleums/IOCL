@@ -60,11 +60,23 @@ export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> 
     setDeleting(true);
     try {
       const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
+      const text = await res.text();
+      let data: { error?: string } = {};
+
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(text.slice(0, 200) || "Failed to delete invoice");
+        }
+      }
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Failed to delete invoice");
       }
+
       await queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       router.push("/invoices");
       router.refresh();
     } catch (err) {

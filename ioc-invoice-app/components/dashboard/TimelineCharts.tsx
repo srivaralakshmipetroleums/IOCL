@@ -61,7 +61,9 @@ function QtyBarTooltip({
 }
 
 export function TimelineCharts({ valueByDate }: TimelineChartsProps) {
-  const valueData = valueByDate.map((d) => ({ ...d, label: formatChartDate(d.date) }));
+  const valueData = [...valueByDate]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((d) => ({ ...d, label: formatChartDate(d.date) }));
 
   return (
     <div className="ioc-card p-5">
@@ -100,7 +102,9 @@ export function QuantityTimelineChart({
 }: {
   quantityByDate: Array<{ date: string; quantity: number }>;
 }) {
-  const qtyData = quantityByDate.map((d) => ({ ...d, label: formatChartDate(d.date) }));
+  const qtyData = [...quantityByDate]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((d) => ({ ...d, label: formatChartDate(d.date) }));
 
   return (
     <div className="ioc-card p-5">

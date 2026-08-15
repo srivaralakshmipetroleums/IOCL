@@ -48,6 +48,12 @@ export async function DELETE(
   if (!user) return response!;
 
   const { id } = await params;
-  await invoiceRepository.delete(id);
-  return NextResponse.json({ success: true });
+
+  try {
+    await invoiceRepository.delete(id);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to delete invoice";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

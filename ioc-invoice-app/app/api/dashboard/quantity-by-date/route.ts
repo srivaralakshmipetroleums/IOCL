@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createServiceClient } from "@/lib/supabase/server";
+import { isFuelProduct } from "@/lib/dashboard/fuel-products";
 import { getDashboardFilters } from "@/lib/dashboard/filters";
 import { getFilteredInvoices, getFilteredLineItems } from "@/lib/dashboard/query-helpers";
 
@@ -18,11 +19,17 @@ export async function GET(request: NextRequest) {
 
   const grouped: Record<string, number> = {};
   for (const item of lineItems) {
-    const date = invoiceMap.get(item.invoice_id) || "unknown";
+    if (!isFuelProduct(item.product)) continue;
+
+    const date = invoiceMap.get(item.invoice_id);
+    if (!date || date === "unknown") continue;
+
     grouped[date] = (grouped[date] || 0) + (item.output_quantity || 0);
   }
 
   return NextResponse.json(
-    Object.entries(grouped).map(([date, quantity]) => ({ date, quantity }))
+    Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, quantity]) => ({ date, quantity }))
   );
 }

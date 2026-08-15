@@ -134,6 +134,10 @@ export class InvoiceRepository {
 
   async delete(id: string): Promise<void> {
     const supabase = await createServiceClient();
+
+    // Clear job item references so invoice delete is not blocked by FK.
+    await supabase.from("processing_job_items").update({ invoice_id: null }).eq("invoice_id", id);
+
     const { error } = await supabase.from("invoices").delete().eq("id", id);
     if (error) throw new Error(error.message);
   }

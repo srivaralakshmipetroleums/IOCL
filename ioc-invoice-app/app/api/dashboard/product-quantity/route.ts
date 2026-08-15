@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createServiceClient } from "@/lib/supabase/server";
+import { normalizeFuelProduct, FUEL_PRODUCTS } from "@/lib/dashboard/fuel-products";
 import { getDashboardFilters } from "@/lib/dashboard/filters";
 import { getFilteredInvoices, getFilteredLineItems } from "@/lib/dashboard/query-helpers";
 
@@ -17,11 +18,15 @@ export async function GET(request: NextRequest) {
 
   const grouped: Record<string, number> = {};
   for (const item of lineItems) {
-    const product = item.product || "Unknown";
+    const product = normalizeFuelProduct(item.product);
+    if (!product) continue;
     grouped[product] = (grouped[product] || 0) + (item.output_quantity || 0);
   }
 
   return NextResponse.json(
-    Object.entries(grouped).map(([product, quantity]) => ({ product, quantity }))
+    FUEL_PRODUCTS.map((product) => ({
+      product,
+      quantity: grouped[product] || 0,
+    })).filter((entry) => entry.quantity > 0)
   );
 }
