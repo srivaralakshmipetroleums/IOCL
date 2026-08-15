@@ -9,6 +9,15 @@ import {
   buildSheetName,
   formatExcelDate,
 } from "@/lib/excel/report-format";
+import {
+  DATA_START_ROW,
+  addStyledTotalRow,
+  applyAutoFilter,
+  applyReportColumnWidths,
+  styleDataRow,
+  styleHeaderRow,
+  styleTitleRow,
+} from "@/lib/excel/report-styles";
 
 export interface ReportFilters {
   dateFrom?: string;
@@ -85,37 +94,33 @@ export class ExcelReportService {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(buildSheetName(filters.dateFrom));
 
-    sheet.mergeCells("A1:H1");
-    const titleCell = sheet.getCell("A1");
-    titleCell.value = buildReportTitle(filters.dateFrom);
-    titleCell.alignment = { horizontal: "center", vertical: "middle" };
-    titleCell.font = { bold: true, size: 12 };
+    sheet.getCell("A1").value = buildReportTitle(filters.dateFrom);
+    styleTitleRow(sheet);
 
     sheet.addRow([...REPORT_COLUMNS]);
-    const headerRow = sheet.getRow(2);
-    headerRow.font = { bold: true };
+    styleHeaderRow(sheet, 2);
 
-    for (const { item, invoice } of rows) {
+    let currentRow = DATA_START_ROW;
+    rows.forEach(({ item, invoice }, index) => {
       sheet.addRow([
         invoice.invoice_date ? formatExcelDate(invoice.invoice_date) : "",
         invoice.supplier_name || "",
         invoice.invoice_number || "",
         normalizeFuelProduct(item.product) || item.product || "",
-        item.invoice_value ?? "",
+        item.invoice_value ?? 0,
         item.hsn_code || "",
-        item.output_quantity ?? "",
+        item.output_quantity ?? 0,
         item.output_measure || "",
       ]);
-    }
+      styleDataRow(sheet, currentRow, index);
+      currentRow += 1;
+    });
 
-    sheet.getColumn(1).width = 14;
-    sheet.getColumn(2).width = 30;
-    sheet.getColumn(3).width = 16;
-    sheet.getColumn(4).width = 14;
-    sheet.getColumn(5).width = 18;
-    sheet.getColumn(6).width = 14;
-    sheet.getColumn(7).width = 14;
-    sheet.getColumn(8).width = 10;
+    const dataEndRow = rows.length ? currentRow - 1 : DATA_START_ROW - 1;
+    const totalRowNum = addStyledTotalRow(sheet, DATA_START_ROW, dataEndRow);
+
+    applyReportColumnWidths(sheet);
+    applyAutoFilter(sheet, totalRowNum);
 
     const buffer = await workbook.xlsx.writeBuffer();
     return {
