@@ -1,20 +1,35 @@
 import { describe, it, expect } from "vitest";
 import { convertLineItems } from "@/lib/invoices/quantity-converter";
 import { getFixtureInvoice } from "@/lib/extraction/local-extractor";
-import { COLUMNS } from "@/lib/excel/excel-report-service";
+import { REPORT_COLUMNS } from "@/lib/excel/report-format";
+import {
+  buildReportFilename,
+  buildReportTitle,
+  buildSheetName,
+  formatExcelDate,
+} from "@/lib/excel/report-format";
 
 describe("excel-mapping", () => {
-  it("has correct MS HSD column headers", () => {
-    expect(COLUMNS).toEqual([
-      "DATE",
-      "Name of the Suppllier",
-      "BILL NO",
-      "PRODUCT",
-      "INVOICE VALUE",
-      "HSN CODE",
-      "QUANTITY",
-      "MEASURE",
+  it("has correct report column headers", () => {
+    expect(REPORT_COLUMNS).toEqual([
+      "Date",
+      "Name of the Supplier",
+      "Bill No",
+      "Product",
+      "Invoice Value (₹)",
+      "HSN Code",
+      "Quantity",
+      "Measure",
     ]);
+  });
+
+  it("formats report filename and title for July 2026", () => {
+    expect(buildReportFilename("2026-07-01")).toBe("IOC_Invoices_July_2026.xlsx");
+    expect(buildSheetName("2026-07-01")).toBe("Jul 2026 Invoices");
+    expect(buildReportTitle("2026-07-01")).toBe(
+      "Indian Oil Corporation — Invoice Report  |  July 2026"
+    );
+    expect(formatExcelDate("2026-07-04")).toBe("04-Jul-26");
   });
 
   it("fixture EBMS row matches PRD values", () => {

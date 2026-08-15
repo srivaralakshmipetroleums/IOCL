@@ -27,10 +27,14 @@ export function ReportsPage() {
       if (!res.ok) throw new Error("Export failed");
 
       const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition");
+      const filenameMatch = disposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch?.[1] || "IOC_Invoices.xlsx";
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `invoice-report-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -51,7 +55,7 @@ export function ReportsPage() {
         <CardHeader>
           <CardTitle>Export Invoice Report</CardTitle>
           <CardDescription>
-            Exports approved invoice line items to Excel matching the MS HSD template format.
+            Exports invoice line items (EBMS and HSD-BSVI) to Excel matching the MS HSD template format.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

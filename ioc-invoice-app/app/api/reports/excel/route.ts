@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
 
-  const buffer = await excelReportService.generateInvoiceReport({
+  const { buffer, filename } = await excelReportService.generateInvoiceReport({
     dateFrom: body.dateFrom,
     dateTo: body.dateTo,
     supplier: body.supplier,
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="invoice-report-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+      "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
 }

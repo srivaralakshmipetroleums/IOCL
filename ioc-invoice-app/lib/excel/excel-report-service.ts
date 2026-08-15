@@ -1,6 +1,14 @@
 import ExcelJS from "exceljs";
 import { createServiceClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/utils";
+import { DASHBOARD_INVOICE_STATUSES } from "@/lib/dashboard/constants";
+import { isFuelProduct, normalizeFuelProduct } from "@/lib/dashboard/fuel-products";
+import {
+  REPORT_COLUMNS,
+  buildReportFilename,
+  buildReportTitle,
+  buildSheetName,
+  formatExcelDate,
+} from "@/lib/excel/report-format";
 
 export interface ReportFilters {
   dateFrom?: string;
@@ -9,86 +17,115 @@ export interface ReportFilters {
   product?: string;
 }
 
-const COLUMNS = [
-  "DATE",
-  "Name of the Suppllier",
-  "BILL NO",
-  "PRODUCT",
-  "INVOICE VALUE",
-  "HSN CODE",
-  "QUANTITY",
-  "MEASURE",
-] as const;
+export interface ReportResult {
+  buffer: Buffer;
+  filename: string;
+}
 
 export class ExcelReportService {
-  async generateInvoiceReport(filters: ReportFilters = {}): Promise<Buffer> {
+  async generateInvoiceReport(filters: ReportFilters = {}): Promise<ReportResult> {
     const supabase = await createServiceClient();
 
-    let query = supabase
-      .from("invoice_line_items")
-      .select(`
-        *,
-        invoices!inner (
-          invoice_date,
-          supplier_name,
-          invoice_number,
-          status
-        )
-      `)
-      .eq("invoices.status", "APPROVED");
+    let invoiceQuery = supabase
+      .from("invoices")
+      .select("id, invoice_date, supplier_name, invoice_number")
+      .in("status", [...DASHBOARD_INVOICE_STATUSES]);
 
-    if (filters.dateFrom) {
-      query = query.gte("invoices.invoice_date", filters.dateFrom);
-    }
-    if (filters.dateTo) {
-      query = query.lte("invoices.invoice_date", filters.dateTo);
-    }
+    if (filters.dateFrom) invoiceQuery = invoiceQuery.gte("invoice_date", filters.dateFrom);
+    if (filters.dateTo) invoiceQuery = invoiceQuery.lte("invoice_date", filters.dateTo);
     if (filters.supplier) {
-      query = query.ilike("invoices.supplier_name", `%${filters.supplier}%`);
-    }
-    if (filters.product) {
-      query = query.ilike("product", `%${filters.product}%`);
+      invoiceQuery = invoiceQuery.ilike("supplier_name", `%${filters.supplier}%`);
     }
 
-    const { data: rows, error } = await query.order("invoices(invoice_date)");
+    const { data: invoices, error: invoiceError } = await invoiceQuery.order("invoice_date");
+    if (invoiceError) throw new Error(invoiceError.message);
 
-    if (error) throw new Error(error.message);
+    const invoiceMap = new Map((invoices || []).map((invoice) => [invoice.id, invoice]));
+    const invoiceIds = (invoices || []).map((invoice) => invoice.id);
+
+    let lineItems: Array<{
+      id: string;
+      invoice_id: string;
+      product: string | null;
+      invoice_value: number | null;
+      hsn_code: string | null;
+      output_quantity: number | null;
+      output_measure: string | null;
+    }> = [];
+
+    if (invoiceIds.length) {
+      let lineItemQuery = supabase
+        .from("invoice_line_items")
+        .select("id, invoice_id, product, invoice_value, hsn_code, output_quantity, output_measure")
+        .in("invoice_id", invoiceIds);
+
+      if (filters.product) {
+        lineItemQuery = lineItemQuery.ilike("product", `%${filters.product}%`);
+      }
+
+      const { data, error: lineItemError } = await lineItemQuery;
+      if (lineItemError) throw new Error(lineItemError.message);
+      lineItems = data || [];
+    }
+
+    const rows = lineItems
+      .filter((item) => isFuelProduct(item.product))
+      .map((item) => ({ item, invoice: invoiceMap.get(item.invoice_id)! }))
+      .filter((row) => row.invoice)
+      .sort((a, b) => {
+        const byDate = (a.invoice.invoice_date || "").localeCompare(b.invoice.invoice_date || "");
+        if (byDate !== 0) return byDate;
+
+        const byBill = (a.invoice.invoice_number || "").localeCompare(b.invoice.invoice_number || "");
+        if (byBill !== 0) return byBill;
+
+        return (a.item.product || "").localeCompare(b.item.product || "");
+      });
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("MS HSD");
+    const sheet = workbook.addWorksheet(buildSheetName(filters.dateFrom));
 
-    sheet.addRow([...COLUMNS]);
-    const headerRow = sheet.getRow(1);
+    sheet.mergeCells("A1:H1");
+    const titleCell = sheet.getCell("A1");
+    titleCell.value = buildReportTitle(filters.dateFrom);
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    titleCell.font = { bold: true, size: 12 };
+
+    sheet.addRow([...REPORT_COLUMNS]);
+    const headerRow = sheet.getRow(2);
     headerRow.font = { bold: true };
 
-    for (const row of rows || []) {
-      const invoice = row.invoices as {
-        invoice_date: string;
-        supplier_name: string;
-        invoice_number: string;
-      };
-
+    for (const { item, invoice } of rows) {
       sheet.addRow([
-        invoice.invoice_date ? formatDate(invoice.invoice_date) : "",
+        invoice.invoice_date ? formatExcelDate(invoice.invoice_date) : "",
         invoice.supplier_name || "",
         invoice.invoice_number || "",
-        row.product || "",
-        row.invoice_value ?? "",
-        row.hsn_code || "",
-        row.output_quantity ?? "",
-        row.output_measure || "",
+        normalizeFuelProduct(item.product) || item.product || "",
+        item.invoice_value ?? "",
+        item.hsn_code || "",
+        item.output_quantity ?? "",
+        item.output_measure || "",
       ]);
     }
 
-    sheet.columns.forEach((col) => {
-      col.width = 18;
-    });
+    sheet.getColumn(1).width = 14;
+    sheet.getColumn(2).width = 30;
+    sheet.getColumn(3).width = 16;
+    sheet.getColumn(4).width = 14;
+    sheet.getColumn(5).width = 18;
+    sheet.getColumn(6).width = 14;
+    sheet.getColumn(7).width = 14;
+    sheet.getColumn(8).width = 10;
 
     const buffer = await workbook.xlsx.writeBuffer();
-    return Buffer.from(buffer);
+    return {
+      buffer: Buffer.from(buffer),
+      filename: buildReportFilename(filters.dateFrom),
+    };
   }
 }
 
 export const excelReportService = new ExcelReportService();
 
-export { COLUMNS };
+/** @deprecated Use REPORT_COLUMNS from report-format.ts */
+export const COLUMNS = REPORT_COLUMNS;
