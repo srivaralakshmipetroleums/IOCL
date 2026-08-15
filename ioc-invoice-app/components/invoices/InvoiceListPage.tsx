@@ -37,7 +37,7 @@ export function InvoiceListPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
-          placeholder="Search by invoice number or supplier..."
+          placeholder="Search by invoice number, supplier, or date (DD/MM/YYYY)..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);

@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { ProductTag } from "@/components/dashboard/DashboardParts";
 import { formatCurrencyINR, formatIndianNumber } from "@/lib/dashboard/format";
+import { matchesDateSearch, parseMonthSearch, parseSearchDate } from "@/lib/search/date-search";
 
 export interface LineItemRow {
   id: string;
   invoice_date: string;
+  invoice_date_iso: string;
   supplier: string;
   bill_no: string;
   product: string;
@@ -38,19 +40,28 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
   );
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = search.trim();
+    const qLower = q.toLowerCase();
+    const isDateQuery = Boolean(parseSearchDate(q) || parseMonthSearch(q));
+
     return items.filter((row) => {
-      const text = [row.invoice_date, row.supplier, row.bill_no, row.product, row.hsn_code]
-        .join(" ")
-        .toLowerCase();
-      return (!q || text.includes(q)) && (!productFilter || row.product === productFilter);
+      const dateMatch = q ? matchesDateSearch(q, row.invoice_date_iso) : true;
+      const textMatch =
+        !q ||
+        [row.supplier, row.bill_no, row.product, row.hsn_code]
+          .join(" ")
+          .toLowerCase()
+          .includes(qLower);
+
+      const matchesSearch = isDateQuery ? dateMatch : textMatch || dateMatch;
+      return matchesSearch && (!productFilter || row.product === productFilter);
     });
   }, [items, search, productFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      const av = sortKey === "invoice_date" ? a.invoice_date_iso : a[sortKey];
+      const bv = sortKey === "invoice_date" ? b.invoice_date_iso : b[sortKey];
       if (typeof av === "number" && typeof bv === "number") {
         return sortAsc ? av - bv : bv - av;
       }
@@ -83,7 +94,7 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
       <div className="flex flex-wrap items-center gap-3 border-b border-ioc-border bg-ioc-section px-5 py-4">
         <input
           type="text"
-          placeholder="Search by bill no, product, date…"
+          placeholder="Search by bill no, product, date (DD/MM/YYYY)…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="min-w-[200px] flex-1 rounded-[10px] border border-ioc-border bg-white px-3.5 py-2 text-sm outline-none focus:border-ioc-blue focus:ring-2 focus:ring-ioc-blue/20"

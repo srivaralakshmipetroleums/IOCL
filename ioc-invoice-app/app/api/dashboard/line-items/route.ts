@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     return {
       id: item.id,
       invoice_date: invoice?.invoice_date ? formatDate(invoice.invoice_date) : "—",
+      invoice_date_iso: invoice?.invoice_date || "",
       supplier: invoice?.supplier_name || "—",
       bill_no: invoice?.invoice_number || "—",
       product: item.product || "—",

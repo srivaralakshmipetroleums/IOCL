@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
+import { parseMonthSearch, parseSearchDate } from "@/lib/search/date-search";
 import type { Invoice, InvoiceInsert, InvoiceLineItem, InvoiceLineItemInsert } from "@/types/database";
 import type { NormalizedInvoice } from "./normalize-extraction";
 
@@ -90,9 +91,20 @@ export class InvoiceRepository {
     if (filters.dateFrom) query = query.gte("invoice_date", filters.dateFrom);
     if (filters.dateTo) query = query.lte("invoice_date", filters.dateTo);
     if (filters.search) {
-      query = query.or(
-        `invoice_number.ilike.%${filters.search}%,supplier_name.ilike.%${filters.search}%`
-      );
+      const parsedDate = parseSearchDate(filters.search);
+      const monthRange = parseMonthSearch(filters.search);
+
+      if (parsedDate) {
+        query = query.eq("invoice_date", parsedDate);
+      } else if (monthRange) {
+        query = query
+          .gte("invoice_date", monthRange.dateFrom)
+          .lte("invoice_date", monthRange.dateTo);
+      } else {
+        query = query.or(
+          `invoice_number.ilike.%${filters.search}%,supplier_name.ilike.%${filters.search}%`
+        );
+      }
     }
 
     const { data, count, error } = await query
