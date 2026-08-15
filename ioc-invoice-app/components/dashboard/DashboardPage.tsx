@@ -15,6 +15,7 @@ import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
 import { buildDashboardQueryString } from "@/lib/dashboard/filters";
+import { fetchDashboardJson } from "@/lib/dashboard/fetch";
 import { getPreviousComparisonPeriod } from "@/lib/dashboard/period";
 
 interface DashboardSummary {
@@ -44,9 +45,9 @@ export function DashboardPage() {
   );
   const vsLabel = prevPeriod ? `vs ${prevPeriod.label}` : "";
 
-  const { data: summary, isLoading } = useQuery<DashboardSummary>({
+  const { data: summary, isLoading, isError, error } = useQuery<DashboardSummary>({
     queryKey: ["dashboard-summary", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
-    queryFn: () => fetch(`/api/dashboard/summary?${qs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/summary?${qs}`),
   });
 
   const { data: prevSummary } = useQuery<DashboardSummary>({
@@ -56,33 +57,33 @@ export function DashboardPage() {
       prevPeriod?.dateTo,
       prevPeriod?.months?.join(",") ?? "",
     ],
-    queryFn: () => fetch(`/api/dashboard/summary?${prevQs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/summary?${prevQs}`),
     enabled: Boolean(prevPeriod),
   });
 
   const { data: valueByDate = [] } = useQuery<Array<{ date: string; value: number }>>({
     queryKey: ["dashboard-value", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
-    queryFn: () => fetch(`/api/dashboard/value-by-date?${qs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/value-by-date?${qs}`),
   });
 
   const { data: quantityByDate = [] } = useQuery<Array<{ date: string; quantity: number }>>({
     queryKey: ["dashboard-qty-date", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
-    queryFn: () => fetch(`/api/dashboard/quantity-by-date?${qs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/quantity-by-date?${qs}`),
   });
 
   const { data: productQuantity = [] } = useQuery<Array<{ product: string; quantity: number }>>({
     queryKey: ["dashboard-product-qty", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
-    queryFn: () => fetch(`/api/dashboard/product-quantity?${qs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/product-quantity?${qs}`),
   });
 
   const { data: productValue = [] } = useQuery<Array<{ product: string; value: number }>>({
     queryKey: ["dashboard-product-value", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
-    queryFn: () => fetch(`/api/dashboard/product-value?${qs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/product-value?${qs}`),
   });
 
   const { data: lineItems = [], isLoading: lineItemsLoading } = useQuery<LineItemRow[]>({
     queryKey: ["dashboard-line-items", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
-    queryFn: () => fetch(`/api/dashboard/line-items?${qs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/line-items?${qs}`),
   });
 
   const trends = prevSummary
@@ -111,6 +112,19 @@ export function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {isError && (
+        <div className="rounded-lg border border-ioc-error/30 bg-ioc-error-light px-4 py-3 text-sm text-ioc-error">
+          Failed to load dashboard data: {error instanceof Error ? error.message : "Unknown error"}
+        </div>
+      )}
+
+      {!isLoading && !isError && summary?.invoiceCount === 0 && (
+        <div className="rounded-lg border border-ioc-border bg-ioc-section px-4 py-3 text-sm text-ioc-muted">
+          No invoices found for <strong>{period.label}</strong>. Try <strong>Last 6 Months</strong> or
+          check the <strong>Invoices</strong> page to confirm data was extracted from Gmail/upload.
+        </div>
+      )}
 
       <KpiCards
         isLoading={isLoading}

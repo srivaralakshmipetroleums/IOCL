@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { IOC_CHART } from "@/lib/dashboard/constants";
 import { buildDashboardQueryString } from "@/lib/dashboard/filters";
+import { fetchDashboardJson } from "@/lib/dashboard/fetch";
 
 interface MonthlyPoint {
   month: string;
@@ -23,7 +24,7 @@ export function MonthlyCountChart() {
 
   const { data = [], isLoading } = useQuery<MonthlyPoint[]>({
     queryKey: ["dashboard-monthly", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
-    queryFn: () => fetch(`/api/dashboard/monthly-count?${qs}`).then((r) => r.json()),
+    queryFn: () => fetchDashboardJson(`/api/dashboard/monthly-count?${qs}`),
   });
 
   const chartData = data.slice(-7).map((d) => ({

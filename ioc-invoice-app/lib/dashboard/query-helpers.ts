@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DashboardFilters } from "./filters";
+import { DASHBOARD_INVOICE_STATUSES } from "./constants";
 
 export interface FilteredInvoice {
   id: string;
@@ -16,7 +17,7 @@ export async function getFilteredInvoices(
   let query = supabase
     .from("invoices")
     .select("id, invoice_date, invoice_total, invoice_number, supplier_name")
-    .eq("status", "APPROVED");
+    .in("status", [...DASHBOARD_INVOICE_STATUSES]);
 
   if (filters.dateFrom) query = query.gte("invoice_date", filters.dateFrom);
   if (filters.dateTo) query = query.lte("invoice_date", filters.dateTo);

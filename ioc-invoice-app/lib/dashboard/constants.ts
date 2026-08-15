@@ -1,3 +1,6 @@
+/** Invoice statuses included in dashboard analytics */
+export const DASHBOARD_INVOICE_STATUSES = ["EXTRACTED", "NEEDS_REVIEW", "APPROVED"] as const;
+
 /** Chart palette — maps to IOC corporate colours */
 export const IOC_CHART = {
   primary: "var(--ioc-navy)",
