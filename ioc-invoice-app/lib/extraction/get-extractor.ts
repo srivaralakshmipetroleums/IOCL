@@ -4,6 +4,8 @@ import { LocalInvoiceExtractor } from "./local-extractor";
 
 export type ExtractorMode = "claude" | "local" | "auto";
 
+export { DEFAULT_CLAUDE_MODEL, getClaudeModel } from "./claude-config";
+
 export function isClaudeConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
 }

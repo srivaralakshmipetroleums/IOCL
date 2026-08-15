@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { InvoiceExtractor, InvoiceInput, ExtractedInvoice } from "./types";
 import { extractedInvoiceSchema } from "@/lib/validation/invoice-schema";
+import { getClaudeModel } from "./claude-config";
 
 const EXTRACTION_PROMPT = `You are an invoice data extraction system. Extract structured data from this IOC invoice PDF.
 
@@ -47,7 +48,7 @@ export class ClaudeInvoiceExtractor implements InvoiceExtractor {
     const base64 = input.pdfBuffer.toString("base64");
 
     const response = await this.client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 4096,
       messages: [
         {
