@@ -3,6 +3,8 @@
 import { use, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,8 +20,10 @@ interface InvoiceDetail extends Invoice {
 
 export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState<Partial<Invoice>>({});
 
   const { data: invoice, isLoading } = useQuery<InvoiceDetail>({
@@ -46,6 +50,27 @@ export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> 
       body: JSON.stringify({ extractorMode: mode }),
     });
     queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete invoice ${invoice?.invoice_number || id}? This cannot be undone.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete invoice");
+      }
+      await queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      router.push("/invoices");
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete invoice");
+      setDeleting(false);
+    }
   }
 
   async function handleSave() {
@@ -78,6 +103,10 @@ export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> 
           )}
           <Button variant="outline" onClick={() => { setEditing(!editing); setFormData(invoice); }}>
             {editing ? "Cancel" : "Edit"}
+          </Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            {deleting ? "Deleting..." : "Delete"}
           </Button>
         </div>
       </div>

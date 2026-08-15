@@ -29,14 +29,15 @@ export class GmailConnectionRepository {
     token_expiry?: string | null;
     gmail_email?: string | null;
   }): Promise<void> {
+    const existing = await this.getByUserId(connection.user_id);
     const supabase = await createServiceClient();
     const { error } = await supabase.from("gmail_connections").upsert(
       {
         user_id: connection.user_id,
         access_token: connection.access_token,
-        refresh_token: connection.refresh_token ?? null,
-        token_expiry: connection.token_expiry ?? null,
-        gmail_email: connection.gmail_email ?? null,
+        refresh_token: connection.refresh_token ?? existing?.refresh_token ?? null,
+        token_expiry: connection.token_expiry ?? existing?.token_expiry ?? null,
+        gmail_email: connection.gmail_email ?? existing?.gmail_email ?? null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }

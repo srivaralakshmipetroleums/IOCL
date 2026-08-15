@@ -104,7 +104,7 @@ export class ProcessingService {
       await this.updateJobItem(itemId, { progress: 40 });
 
       const extractor = getExtractor(extractorMode);
-      const provider = extractorMode === "local" ? "local" : isClaudeConfigured() ? "claude" : "local";
+      const provider = extractorMode === "local" ? "local" : "claude";
       const extracted = await extractor.extract({ pdfBuffer: buffer, filename: storagePath });
 
       await this.updateJobItem(itemId, { progress: 60 });

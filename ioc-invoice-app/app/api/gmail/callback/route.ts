@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getAppBaseUrl } from "@/lib/app-url";
 import { createClient } from "@/lib/supabase/server";
 import { exchangeCodeForTokens } from "@/lib/gmail/gmail-service";
 import { gmailConnectionRepository } from "@/lib/gmail/gmail-connection-repository";
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
   const state = params.get("state");
   const error = params.get("error");
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = getAppBaseUrl(request);
 
   if (error) {
     return NextResponse.redirect(`${baseUrl}/gmail?error=${encodeURIComponent(error)}`);
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForTokens(code, request);
     await gmailConnectionRepository.upsert({
       user_id: user.id,
       ...tokens,

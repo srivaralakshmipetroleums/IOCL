@@ -63,3 +63,25 @@ export function getYearOptions(): number[] {
   const current = new Date().getFullYear();
   return Array.from({ length: 6 }, (_, i) => current - 2 + i);
 }
+
+/** Returns the last N calendar months ending with the month of `fromDate`, oldest first. */
+export function getLastNCalendarMonths(
+  count: number,
+  fromDate = new Date()
+): Array<{ year: number; month: number; label: string }> {
+  const months: Array<{ year: number; month: number; label: string }> = [];
+
+  for (let offset = count - 1; offset >= 0; offset--) {
+    const date = new Date(fromDate.getFullYear(), fromDate.getMonth() - offset, 1);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    months.push({
+      year,
+      month,
+      label: date.toLocaleString("en-IN", { month: "long", year: "numeric" }),
+    });
+  }
+
+  return months;
+}

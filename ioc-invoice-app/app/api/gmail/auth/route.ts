@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAuthUrl } from "@/lib/gmail/gmail-service";
 import { isGoogleOAuthConfigured } from "@/lib/gmail/gmail-config";
 import { cookies } from "next/headers";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { user, response } = await requireAuth();
   if (!user) return response!;
 
@@ -25,6 +25,6 @@ export async function GET() {
     path: "/",
   });
 
-  const url = getAuthUrl(state);
+  const url = getAuthUrl(state, request);
   return NextResponse.redirect(url);
 }

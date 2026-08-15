@@ -1,3 +1,6 @@
+import type { NextRequest } from "next/server";
+import { getGmailOAuthRedirectUri } from "@/lib/app-url";
+
 export interface GmailInvoiceConfig {
   sender: string;
   subject: string;
@@ -12,13 +15,11 @@ export function getGmailInvoiceConfig(): GmailInvoiceConfig {
   };
 }
 
-export function getGoogleOAuthConfig() {
+export function getGoogleOAuthConfig(request?: NextRequest) {
   return {
     clientId: process.env.GOOGLE_CLIENT_ID || "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    redirectUri:
-      process.env.GOOGLE_REDIRECT_URI ||
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/gmail/callback`,
+    redirectUri: getGmailOAuthRedirectUri(request),
   };
 }
 

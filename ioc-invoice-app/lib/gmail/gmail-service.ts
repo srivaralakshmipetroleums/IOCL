@@ -1,4 +1,5 @@
 import { google, gmail_v1 } from "googleapis";
+import type { NextRequest } from "next/server";
 import { getGoogleOAuthConfig, getGmailInvoiceConfig } from "./gmail-config";
 import { buildGmailSearchQuery } from "./gmail-search";
 import { gmailConnectionRepository } from "./gmail-connection-repository";
@@ -9,13 +10,13 @@ import type { ExtractorMode } from "@/lib/extraction/get-extractor";
 
 const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
 
-export function createOAuth2Client() {
-  const { clientId, clientSecret, redirectUri } = getGoogleOAuthConfig();
+export function createOAuth2Client(request?: NextRequest) {
+  const { clientId, clientSecret, redirectUri } = getGoogleOAuthConfig(request);
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
-export function getAuthUrl(state: string): string {
-  const oauth2Client = createOAuth2Client();
+export function getAuthUrl(state: string, request?: NextRequest): string {
+  const oauth2Client = createOAuth2Client(request);
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -24,8 +25,8 @@ export function getAuthUrl(state: string): string {
   });
 }
 
-export async function exchangeCodeForTokens(code: string) {
-  const oauth2Client = createOAuth2Client();
+export async function exchangeCodeForTokens(code: string, request?: NextRequest) {
+  const oauth2Client = createOAuth2Client(request);
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
 

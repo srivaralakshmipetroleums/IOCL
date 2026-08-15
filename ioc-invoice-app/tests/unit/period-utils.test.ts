@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getMonthDateRange, getYearDateRange, isDateInPeriod } from "@/lib/invoices/period-utils";
+import { getMonthDateRange, getYearDateRange, getLastNCalendarMonths, isDateInPeriod } from "@/lib/invoices/period-utils";
 
 describe("period-utils", () => {
   it("July 2026 month range per PRD Gmail logic", () => {
@@ -24,5 +24,12 @@ describe("period-utils", () => {
     const period = getMonthDateRange(2026, 7);
     expect(isDateInPeriod("2026-07-31", period)).toBe(true);
     expect(isDateInPeriod("2026-08-01", period)).toBe(false);
+  });
+
+  it("getLastNCalendarMonths returns oldest-first ending at fromDate month", () => {
+    const months = getLastNCalendarMonths(6, new Date(2026, 7, 15));
+    expect(months).toHaveLength(6);
+    expect(months[0]).toEqual({ year: 2026, month: 3, label: "March 2026" });
+    expect(months[5]).toEqual({ year: 2026, month: 8, label: "August 2026" });
   });
 });

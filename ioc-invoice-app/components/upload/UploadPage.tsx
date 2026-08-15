@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Upload, FileText, X, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
@@ -14,8 +14,6 @@ import { PeriodSelector } from "./PeriodSelector";
 import type { DatePeriod } from "@/lib/invoices/period-utils";
 import { getMonthDateRange } from "@/lib/invoices/period-utils";
 
-const EXTRACTION_MODE_KEY = "ioc-extraction-mode";
-
 interface UploadItem {
   file: File;
   itemId?: string;
@@ -26,7 +24,7 @@ interface UploadItem {
 
 interface ExtractionConfig {
   claudeConfigured: boolean;
-  defaultMode: "claude" | "local";
+  defaultMode: "claude";
   providerLabel: string;
   serviceRoleConfigured: boolean;
 }
@@ -36,8 +34,6 @@ export function UploadPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [useAiExtraction, setUseAiExtraction] = useState(true);
-  const [lastExtractorMode, setLastExtractorMode] = useState<string>("");
   const [period, setPeriod] = useState<DatePeriod>(() => {
     const now = new Date();
     return getMonthDateRange(now.getFullYear(), now.getMonth() + 1);
@@ -47,15 +43,6 @@ export function UploadPage() {
     queryKey: ["extraction-config"],
     queryFn: () => fetch("/api/settings/extraction").then((r) => r.json()),
   });
-
-  useEffect(() => {
-    const saved = localStorage.getItem(EXTRACTION_MODE_KEY);
-    if (saved === "claude" || saved === "local") {
-      setUseAiExtraction(saved === "claude");
-    } else if (extractionConfig) {
-      setUseAiExtraction(extractionConfig.claudeConfigured);
-    }
-  }, [extractionConfig]);
 
   const { data: jobStatus } = useQuery({
     queryKey: ["job-status", jobId],
@@ -79,22 +66,15 @@ export function UploadPage() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  function handleExtractionToggle(checked: boolean) {
-    setUseAiExtraction(checked);
-    localStorage.setItem(EXTRACTION_MODE_KEY, checked ? "claude" : "local");
-  }
-
   async function handleUpload() {
     if (!files.length) return;
 
-    const extractorMode = useAiExtraction ? "claude" : "local";
-    if (useAiExtraction && !extractionConfig?.claudeConfigured) {
-      alert("Claude API key is not configured. Add ANTHROPIC_API_KEY to .env.local and restart the dev server.");
+    if (!extractionConfig?.claudeConfigured) {
+      alert("Claude API key is not configured. Add ANTHROPIC_API_KEY to your environment variables.");
       return;
     }
 
     setUploading(true);
-    setLastExtractorMode(extractorMode);
 
     try {
       const createRes = await fetch("/api/upload/create-job", {
@@ -144,16 +124,13 @@ export function UploadPage() {
       const startRes = await fetch("/api/upload/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: newJobId, extractorMode, period }),
+        body: JSON.stringify({ jobId: newJobId, extractorMode: "claude", period }),
       });
 
       if (!startRes.ok) {
         const err = await startRes.json();
         throw new Error(err.error || "Extraction failed");
       }
-
-      const startData = await startRes.json();
-      setLastExtractorMode(startData.extractorMode || extractorMode);
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Upload failed");
@@ -199,26 +176,14 @@ export function UploadPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={useAiExtraction}
-                onChange={(e) => handleExtractionToggle(e.target.checked)}
-                disabled={!extractionConfig?.claudeConfigured}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <span className="text-sm font-medium">Use Claude AI extraction</span>
-            </label>
             {extractionConfig?.claudeConfigured ? (
               <Badge variant="success">Claude API connected</Badge>
             ) : (
-              <Badge variant="warning">API key not detected — restart dev server after adding keys</Badge>
+              <Badge variant="warning">Claude API key not configured</Badge>
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            {useAiExtraction && extractionConfig?.claudeConfigured
-              ? "PDFs will be sent to Claude for automatic field extraction."
-              : "Sample fixture data will be used instead of real PDF extraction."}
+            PDFs are extracted with Claude API. Sample test data is no longer used.
           </p>
         </CardContent>
       </Card>
@@ -264,10 +229,12 @@ export function UploadPage() {
                 </div>
               ))}
               {!uploading && !processing && (
-                <Button onClick={handleUpload} className="mt-4" disabled={!files.length}>
-                  {useAiExtraction && extractionConfig?.claudeConfigured
-                    ? `Upload & Extract with AI (${files.length} file${files.length !== 1 ? "s" : ""})`
-                    : `Upload & Process (${files.length} file${files.length !== 1 ? "s" : ""})`}
+                <Button
+                  onClick={handleUpload}
+                  className="mt-4"
+                  disabled={!files.length || !extractionConfig?.claudeConfigured}
+                >
+                  {`Upload & Extract with Claude (${files.length} file${files.length !== 1 ? "s" : ""})`}
                 </Button>
               )}
             </div>
@@ -275,11 +242,9 @@ export function UploadPage() {
 
           {processing && jobStatus?.job && (
             <div className="mt-6 space-y-4">
-              {lastExtractorMode && (
-                <p className="text-sm text-muted-foreground">
-                  Extractor: <strong>{lastExtractorMode === "claude" ? "Claude API" : "Local sample data"}</strong>
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground">
+                Extractor: <strong>Claude API</strong>
+              </p>
               <div className="flex items-center justify-between text-sm">
                 <span>
                   {jobStatus.job.processed_files} / {jobStatus.job.total_files} processed

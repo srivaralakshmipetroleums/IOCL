@@ -12,8 +12,8 @@ export function getExtractionConfig() {
   const claudeConfigured = isClaudeConfigured();
   return {
     claudeConfigured,
-    defaultMode: claudeConfigured ? ("claude" as const) : ("local" as const),
-    providerLabel: claudeConfigured ? "Claude API" : "Local (sample data)",
+    defaultMode: "claude" as const,
+    providerLabel: claudeConfigured ? "Claude API" : "Claude API (not configured)",
   };
 }
 
@@ -22,20 +22,13 @@ export function getExtractor(mode: ExtractorMode = "auto"): InvoiceExtractor {
     return new LocalInvoiceExtractor();
   }
 
-  if (mode === "claude") {
-    if (!isClaudeConfigured()) {
-      throw new Error(
-        "Claude API key is not configured. Add ANTHROPIC_API_KEY to .env.local and restart the dev server."
-      );
-    }
-    return new ClaudeInvoiceExtractor();
+  if (!isClaudeConfigured()) {
+    throw new Error(
+      "Claude API key is not configured. Add ANTHROPIC_API_KEY to your environment variables."
+    );
   }
 
-  // auto: use Claude when key is available
-  if (isClaudeConfigured()) {
-    return new ClaudeInvoiceExtractor();
-  }
-  return new LocalInvoiceExtractor();
+  return new ClaudeInvoiceExtractor();
 }
 
 export function resolveExtractorMode(
