@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { buildGmailSearchQuery, buildGmailAfterDate, buildGmailBeforeDate } from "@/lib/gmail/gmail-search";
+import {
+  buildGmailSearchQuery,
+  buildGmailSearchQueryForRange,
+  buildGmailAfterDate,
+  buildGmailBeforeDate,
+} from "@/lib/gmail/gmail-search";
+import { getMonthChunksInDateRange } from "@/lib/invoices/period-utils";
 
 const config = {
   sender: "B2BPRD@indianoil.in",
@@ -26,5 +32,21 @@ describe("gmail-search", () => {
     expect(buildGmailAfterDate(2026, 7)).toBe("2026/07/01");
     expect(buildGmailBeforeDate(2026, 7)).toBe("2026/08/01");
     expect(buildGmailBeforeDate(2026, 12)).toBe("2027/01/01");
+  });
+
+  it("builds custom date range query", () => {
+    const query = buildGmailSearchQueryForRange("2026-01-15", "2026-03-20", config);
+    expect(query).toBe(
+      'from:B2BPRD@indianoil.in subject:"AC4 Inv.-" has:attachment after:2026/01/15 before:2026/03/21'
+    );
+  });
+
+  it("splits multi-month ranges into chunks", () => {
+    const chunks = getMonthChunksInDateRange("2026-01-15", "2026-03-20");
+    expect(chunks).toEqual([
+      { dateFrom: "2026-01-15", dateToInclusive: "2026-01-31", label: "2026-01-15 to 2026-01-31" },
+      { dateFrom: "2026-02-01", dateToInclusive: "2026-02-28", label: "2026-02-01 to 2026-02-28" },
+      { dateFrom: "2026-03-01", dateToInclusive: "2026-03-20", label: "2026-03-01 to 2026-03-20" },
+    ]);
   });
 });

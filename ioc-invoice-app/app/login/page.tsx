@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IndianOilLogo } from "@/components/brand/IndianOilLogo";
+import { ENABLE_SIGNUP } from "@/lib/auth/auth-config";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -24,7 +25,7 @@ export default function LoginPage() {
 
     const supabase = createClient();
 
-    if (isSignUp) {
+    if (ENABLE_SIGNUP && isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setError(error.message);
@@ -95,16 +96,18 @@ export default function LoginPage() {
                 </p>
               )}
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
+                {loading ? "Please wait..." : ENABLE_SIGNUP && isSignUp ? "Sign Up" : "Sign In"}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => setIsSignUp(!isSignUp)}
-              >
-                {isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up"}
-              </Button>
+              {ENABLE_SIGNUP && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                >
+                  {isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up"}
+                </Button>
+              )}
             </form>
           </CardContent>
         </Card>

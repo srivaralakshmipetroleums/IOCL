@@ -1,11 +1,15 @@
 import { google, gmail_v1 } from "googleapis";
 import type { NextRequest } from "next/server";
 import { getGoogleOAuthConfig, getGmailInvoiceConfig } from "./gmail-config";
-import { buildGmailSearchQuery } from "./gmail-search";
+import { buildGmailSearchQueryForRange } from "./gmail-search";
 import { gmailConnectionRepository } from "./gmail-connection-repository";
 import { processingService } from "@/lib/invoices/processing-service";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getMonthDateRange } from "@/lib/invoices/period-utils";
+import {
+  getInclusiveDateRangePeriod,
+  getMonthDateRange,
+  type DatePeriod,
+} from "@/lib/invoices/period-utils";
 import type { ExtractorMode } from "@/lib/extraction/get-extractor";
 
 const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
@@ -156,14 +160,14 @@ async function listGmailMessageIds(
   return messageIds;
 }
 
-export async function scanGmailMonth(
+export async function scanGmailRange(
   userId: string,
-  year: number,
-  month: number
+  dateFrom: string,
+  dateToInclusive: string
 ): Promise<GmailScanResult> {
   const config = getGmailInvoiceConfig();
-  const query = buildGmailSearchQuery(year, month, config);
-  const period = getMonthDateRange(year, month);
+  const query = buildGmailSearchQueryForRange(dateFrom, dateToInclusive, config);
+  const period = getInclusiveDateRangePeriod(dateFrom, dateToInclusive);
   const gmail = await getAuthenticatedGmailClient(userId);
   const messageIds = await listGmailMessageIds(gmail, query);
 
@@ -198,15 +202,24 @@ export async function scanGmailMonth(
   };
 }
 
+export async function scanGmailMonth(
+  userId: string,
+  year: number,
+  month: number
+): Promise<GmailScanResult> {
+  const period = getMonthDateRange(year, month);
+  const lastDay = new Date(year, month, 0).getDate();
+  const dateToInclusive = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return scanGmailRange(userId, period.dateFrom, dateToInclusive);
+}
+
 export async function processGmailMessage(
   userId: string,
   jobId: string,
   messageId: string,
-  year: number,
-  month: number,
+  period: DatePeriod,
   extractorMode: ExtractorMode = "auto"
 ): Promise<GmailMessageProcessResult> {
-  const period = getMonthDateRange(year, month);
   const gmail = await getAuthenticatedGmailClient(userId);
   const errors: string[] = [];
   let pdfsDownloaded = 0;
@@ -327,7 +340,20 @@ export async function fetchGmailInvoices(
   month: number,
   extractorMode: ExtractorMode = "auto"
 ): Promise<GmailFetchResult> {
-  const scan = await scanGmailMonth(userId, year, month);
+  const period = getMonthDateRange(year, month);
+  const lastDay = new Date(year, month, 0).getDate();
+  const dateToInclusive = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return fetchGmailDateRange(userId, period.dateFrom, dateToInclusive, extractorMode);
+}
+
+export async function fetchGmailDateRange(
+  userId: string,
+  dateFrom: string,
+  dateToInclusive: string,
+  extractorMode: ExtractorMode = "auto"
+): Promise<GmailFetchResult> {
+  const scan = await scanGmailRange(userId, dateFrom, dateToInclusive);
+  const period = getInclusiveDateRangePeriod(dateFrom, dateToInclusive);
   const errors: string[] = [];
   let pdfsDownloaded = 0;
   let invoicesCompleted = 0;
@@ -339,8 +365,7 @@ export async function fetchGmailInvoices(
       userId,
       scan.jobId,
       messageId,
-      year,
-      month,
+      period,
       extractorMode
     );
     pdfsDownloaded += partial.pdfsDownloaded;

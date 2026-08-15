@@ -8,9 +8,15 @@ import { CalendarRange, Mail, RefreshCw, Unplug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { PageTitle } from "@/components/layout/PageTitle";
-import { MONTHS, getLastNCalendarMonths, getYearOptions } from "@/lib/invoices/period-utils";
+import {
+  getLastNCalendarMonths,
+  getMonthChunksInDateRange,
+  type InclusiveDateRangeChunk,
+} from "@/lib/invoices/period-utils";
 
 interface GmailStatus {
   connected: boolean;
@@ -36,27 +42,58 @@ interface FetchResult {
 }
 
 interface BulkFetchResult {
-  monthsProcessed: number;
+  chunksProcessed: number;
   emailsFound: number;
   pdfsDownloaded: number;
   invoicesCompleted: number;
   skipped: number;
   failed: number;
   errors: string[];
-  monthResults: Array<{
+  chunkResults: Array<{
     label: string;
     success: boolean;
     result?: FetchResult;
     error?: string;
   }>;
+  dateFrom: string;
+  dateTo: string;
 }
 
 interface FetchProgress {
   label: string;
-  monthCurrent?: number;
-  monthTotal?: number;
+  chunkCurrent?: number;
+  chunkTotal?: number;
   emailCurrent?: number;
   emailTotal?: number;
+}
+
+function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultDateTo(): string {
+  return formatIsoDate(new Date());
+}
+
+function getDefaultDateFrom(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function getThisMonthRange(): { dateFrom: string; dateTo: string } {
+  return { dateFrom: getDefaultDateFrom(), dateTo: getDefaultDateTo() };
+}
+
+function getLastNMonthsRange(count: number): { dateFrom: string; dateTo: string } {
+  const months = getLastNCalendarMonths(count);
+  const first = months[0];
+  return {
+    dateFrom: `${first.year}-${String(first.month).padStart(2, "0")}-01`,
+    dateTo: getDefaultDateTo(),
+  };
 }
 
 async function postGmailApi<T>(url: string, body: Record<string, unknown>): Promise<T> {
@@ -100,12 +137,15 @@ interface GmailProcessResponse {
   errors: string[];
 }
 
-async function fetchMonth(
-  year: number,
-  month: number,
+async function fetchDateRangeChunk(
+  dateFrom: string,
+  dateTo: string,
   onProgress?: (progress: FetchProgress) => void
 ): Promise<FetchResult> {
-  const scan = await postGmailApi<GmailScanResponse>("/api/gmail/fetch/scan", { year, month });
+  const scan = await postGmailApi<GmailScanResponse>("/api/gmail/fetch/scan", {
+    dateFrom,
+    dateTo,
+  });
 
   const result: FetchResult = {
     jobId: scan.jobId,
@@ -132,8 +172,8 @@ async function fetchMonth(
       const partial = await postGmailApi<GmailProcessResponse>("/api/gmail/fetch/process", {
         jobId: scan.jobId,
         messageId,
-        year,
-        month,
+        dateFrom,
+        dateTo,
         extractorMode: "claude",
       });
 
@@ -162,8 +202,8 @@ async function fetchMonth(
 
 export function GmailPage() {
   const searchParams = useSearchParams();
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
+  const [dateTo, setDateTo] = useState(getDefaultDateTo);
   const [fetching, setFetching] = useState(false);
   const [fetchProgress, setFetchProgress] = useState<FetchProgress | null>(null);
   const [result, setResult] = useState<FetchResult | null>(null);
@@ -191,73 +231,93 @@ export function GmailPage() {
     refetch();
   }
 
-  async function handleFetch() {
-    setFetching(true);
-    setFetchError("");
-    setResult(null);
-    setBulkResult(null);
-    setFetchProgress(null);
-
-    try {
-      const data = await fetchMonth(year, month, (progress) => {
-        setFetchProgress(progress);
-      });
-      setResult(data);
-    } catch (err) {
-      setFetchError(err instanceof Error ? err.message : "Fetch failed");
-    } finally {
-      setFetching(false);
-    }
+  function validateDateRange(): string | null {
+    if (!dateFrom || !dateTo) return "Please select both start and end dates.";
+    if (dateFrom > dateTo) return "Start date must be on or before end date.";
+    return null;
   }
 
-  async function handleFetchLast6Months() {
-    const months = getLastNCalendarMonths(6);
+  function applyPreset(range: { dateFrom: string; dateTo: string }) {
+    setDateFrom(range.dateFrom);
+    setDateTo(range.dateTo);
+    setFetchError("");
+  }
+
+  async function runRangeFetch(
+    from: string,
+    to: string,
+    chunks: InclusiveDateRangeChunk[]
+  ) {
     setFetching(true);
     setFetchError("");
     setResult(null);
     setBulkResult(null);
 
+    if (chunks.length === 1) {
+      try {
+        const data = await fetchDateRangeChunk(chunks[0].dateFrom, chunks[0].dateToInclusive, (progress) => {
+          setFetchProgress({
+            ...progress,
+            label: `${chunks[0].label} — ${progress.label}`,
+          });
+        });
+        setResult(data);
+      } catch (err) {
+        setFetchError(err instanceof Error ? err.message : "Fetch failed");
+      } finally {
+        setFetching(false);
+        setFetchProgress(null);
+      }
+      return;
+    }
+
     const aggregated: BulkFetchResult = {
-      monthsProcessed: 0,
+      chunksProcessed: 0,
       emailsFound: 0,
       pdfsDownloaded: 0,
       invoicesCompleted: 0,
       skipped: 0,
       failed: 0,
       errors: [],
-      monthResults: [],
+      chunkResults: [],
+      dateFrom: from,
+      dateTo: to,
     };
 
     try {
-      for (let i = 0; i < months.length; i++) {
-        const { year: y, month: m, label } = months[i];
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
 
         try {
-          const monthResult = await fetchMonth(y, m, (progress) => {
-            setFetchProgress({
-              ...progress,
-              label: `${label} — ${progress.label}`,
-              monthCurrent: i + 1,
-              monthTotal: months.length,
-            });
-          });
+          const chunkResult = await fetchDateRangeChunk(
+            chunk.dateFrom,
+            chunk.dateToInclusive,
+            (progress) => {
+              setFetchProgress({
+                ...progress,
+                label: `${chunk.label} — ${progress.label}`,
+                chunkCurrent: i + 1,
+                chunkTotal: chunks.length,
+              });
+            }
+          );
 
-          aggregated.monthsProcessed++;
-          aggregated.emailsFound += monthResult.emailsFound;
-          aggregated.pdfsDownloaded += monthResult.pdfsDownloaded;
-          aggregated.invoicesCompleted += monthResult.invoicesCompleted;
-          aggregated.skipped += monthResult.skipped;
-          aggregated.failed += monthResult.failed;
-          aggregated.errors.push(...monthResult.errors);
-          aggregated.monthResults.push({
-            label,
-            success: monthResult.failed === 0 || monthResult.invoicesCompleted > 0,
-            result: monthResult,
+          aggregated.chunksProcessed++;
+          aggregated.emailsFound += chunkResult.emailsFound;
+          aggregated.pdfsDownloaded += chunkResult.pdfsDownloaded;
+          aggregated.invoicesCompleted += chunkResult.invoicesCompleted;
+          aggregated.skipped += chunkResult.skipped;
+          aggregated.failed += chunkResult.failed;
+          aggregated.errors.push(...chunkResult.errors);
+          aggregated.chunkResults.push({
+            label: chunk.label,
+            success: chunkResult.failed === 0 || chunkResult.invoicesCompleted > 0,
+            result: chunkResult,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Fetch failed";
-          aggregated.monthResults.push({ label, success: false, error: message });
-          aggregated.errors.push(`${label}: ${message}`);
+          aggregated.chunkResults.push({ label: chunk.label, success: false, error: message });
+          aggregated.errors.push(`${chunk.label}: ${message}`);
         }
       }
 
@@ -268,15 +328,36 @@ export function GmailPage() {
     }
   }
 
+  async function handleFetchDateRange() {
+    const validationError = validateDateRange();
+    if (validationError) {
+      setFetchError(validationError);
+      return;
+    }
+
+    const chunks = getMonthChunksInDateRange(dateFrom, dateTo);
+    await runRangeFetch(dateFrom, dateTo, chunks);
+  }
+
+  async function handlePresetRange(range: { dateFrom: string; dateTo: string }) {
+    applyPreset(range);
+    const chunks = getMonthChunksInDateRange(range.dateFrom, range.dateTo);
+    await runRangeFetch(range.dateFrom, range.dateTo, chunks);
+  }
+
   const progressPercent = fetchProgress?.emailCurrent && fetchProgress.emailTotal
     ? Math.round((fetchProgress.emailCurrent / fetchProgress.emailTotal) * 100)
-    : fetchProgress?.monthCurrent && fetchProgress.monthTotal
-      ? Math.round((fetchProgress.monthCurrent / fetchProgress.monthTotal) * 100)
+    : fetchProgress?.chunkCurrent && fetchProgress.chunkTotal
+      ? Math.round((fetchProgress.chunkCurrent / fetchProgress.chunkTotal) * 100)
       : fetching
         ? 10
         : 0;
 
   const canFetch = status?.connected && status.claudeConfigured && !fetching;
+  const isSingleChunk =
+    !bulkResult && dateFrom && dateTo
+      ? getMonthChunksInDateRange(dateFrom, dateTo).length === 1
+      : true;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -357,56 +438,72 @@ export function GmailPage() {
           <CardHeader>
             <CardTitle>Fetch Invoices</CardTitle>
             <CardDescription>
-              Fetch one month at a time, or run all of the last 6 months automatically with Claude extraction
+              Select any date range — days, months, or years. Invoices are fetched with Claude extraction.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Year</label>
-                <select
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <Label htmlFor="gmail-date-from">Date From</Label>
+                <Input
+                  id="gmail-date-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
                   disabled={fetching}
-                >
-                  {getYearOptions().map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Month</label>
-                <select
-                  value={month}
-                  onChange={(e) => setMonth(Number(e.target.value))}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <Label htmlFor="gmail-date-to">Date To</Label>
+                <Input
+                  id="gmail-date-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
                   disabled={fetching}
-                >
-                  {MONTHS.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleFetch} disabled={!canFetch}>
-                {fetching && !fetchProgress ? "Searching Gmail..." : "Fetch Selected Month"}
+              <Button variant="outline" size="sm" disabled={fetching} onClick={() => applyPreset(getThisMonthRange())}>
+                This Month
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={fetching}
+                onClick={() => applyPreset(getLastNMonthsRange(6))}
+              >
+                Last 6 Months
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={fetching}
+                onClick={() => applyPreset(getLastNMonthsRange(12))}
+              >
+                Last 12 Months
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleFetchDateRange} disabled={!canFetch}>
+                {fetching && !fetchProgress ? "Searching Gmail..." : "Fetch Date Range (Claude)"}
               </Button>
               <Button
                 variant="secondary"
-                onClick={handleFetchLast6Months}
+                onClick={() => handlePresetRange(getLastNMonthsRange(6))}
                 disabled={!canFetch}
               >
                 <CalendarRange className="mr-2 h-4 w-4" />
-                Fetch Last 6 Months (Claude)
+                Fetch Last 6 Months Now
               </Button>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Each email is processed separately to avoid timeouts. Already-processed emails are skipped automatically.
-              Re-run a month to fetch any invoices that were missed.
+              Longer ranges are processed in monthly chunks to show progress. Each email is processed
+              separately to avoid timeouts. Already-processed emails are skipped automatically.
             </p>
 
             {fetching && (
@@ -422,8 +519,11 @@ export function GmailPage() {
               <p className="text-sm text-destructive">{fetchError}</p>
             )}
 
-            {result && !bulkResult && (
+            {result && !bulkResult && isSingleChunk && (
               <div className="space-y-3 rounded-md border p-4 text-sm">
+                <p className="font-medium">
+                  {dateFrom} to {dateTo}
+                </p>
                 <p>{result.emailsFound} emails found</p>
                 <p>{result.pdfsDownloaded} PDFs downloaded</p>
                 <p>{result.invoicesCompleted} invoices completed</p>
@@ -446,9 +546,12 @@ export function GmailPage() {
 
             {bulkResult && (
               <div className="space-y-3 rounded-md border p-4 text-sm">
-                <p className="font-medium">Last 6 months — summary</p>
+                <p className="font-medium">
+                  {bulkResult.dateFrom} to {bulkResult.dateTo} — summary
+                </p>
                 <p>
-                  {bulkResult.monthResults.filter((entry) => entry.success).length} of 6 months completed with invoices
+                  {bulkResult.chunkResults.filter((entry) => entry.success).length} of{" "}
+                  {bulkResult.chunkResults.length} periods completed with invoices
                 </p>
                 <p>{bulkResult.emailsFound} emails found</p>
                 <p>{bulkResult.pdfsDownloaded} PDFs downloaded</p>
@@ -460,9 +563,9 @@ export function GmailPage() {
                 <Progress value={100} />
 
                 <div className="space-y-2 border-t pt-3">
-                  <p className="font-medium">By month</p>
+                  <p className="font-medium">By period</p>
                   <ul className="space-y-1">
-                    {bulkResult.monthResults.map((entry) => (
+                    {bulkResult.chunkResults.map((entry) => (
                       <li key={entry.label} className="flex flex-wrap items-center gap-2">
                         <span>{entry.label}</span>
                         {entry.success ? (
@@ -471,7 +574,9 @@ export function GmailPage() {
                           </Badge>
                         ) : (
                           <Badge variant="warning">
-                            {entry.result?.invoicesCompleted ? `${entry.result.invoicesCompleted} completed` : "Failed"}
+                            {entry.result?.invoicesCompleted
+                              ? `${entry.result.invoicesCompleted} completed`
+                              : "Failed"}
                           </Badge>
                         )}
                         {entry.result && (

@@ -40,6 +40,83 @@ export function getCustomDateRange(dateFrom: string, dateTo: string): DatePeriod
   };
 }
 
+function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const date = new Date(year, month - 1, day + days);
+  return formatIsoDate(date);
+}
+
+/** User-selected inclusive end date → exclusive period end for queries/storage. */
+export function getInclusiveDateRangePeriod(
+  dateFrom: string,
+  dateToInclusive: string
+): DatePeriod {
+  return {
+    dateFrom,
+    dateTo: addDays(dateToInclusive, 1),
+    mode: "range",
+    label: `${dateFrom} to ${dateToInclusive}`,
+  };
+}
+
+export interface InclusiveDateRangeChunk {
+  dateFrom: string;
+  dateToInclusive: string;
+  label: string;
+}
+
+/** Split an inclusive date range into month-sized chunks for Gmail fetch progress. */
+export function getMonthChunksInDateRange(
+  dateFrom: string,
+  dateToInclusive: string
+): InclusiveDateRangeChunk[] {
+  if (dateFrom > dateToInclusive) return [];
+
+  const chunks: InclusiveDateRangeChunk[] = [];
+  let cursorFrom = dateFrom;
+
+  while (cursorFrom <= dateToInclusive) {
+    const [year, month] = cursorFrom.split("-").map(Number);
+    const monthEnd = formatIsoDate(new Date(year, month, 0));
+    const chunkEnd = monthEnd < dateToInclusive ? monthEnd : dateToInclusive;
+
+    chunks.push({
+      dateFrom: cursorFrom,
+      dateToInclusive: chunkEnd,
+      label:
+        cursorFrom === chunkEnd
+          ? cursorFrom
+          : `${cursorFrom} to ${chunkEnd}`,
+    });
+
+    if (chunkEnd >= dateToInclusive) break;
+    cursorFrom = addDays(chunkEnd, 1);
+  }
+
+  return chunks;
+}
+
+export function getLastNDaysRange(
+  days: number,
+  fromDate = new Date()
+): { dateFrom: string; dateToInclusive: string } {
+  const end = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+
+  return {
+    dateFrom: formatIsoDate(start),
+    dateToInclusive: formatIsoDate(end),
+  };
+}
+
 export function isDateInPeriod(date: string, period: Pick<DatePeriod, "dateFrom" | "dateTo">): boolean {
   return date >= period.dateFrom && date < period.dateTo;
 }
