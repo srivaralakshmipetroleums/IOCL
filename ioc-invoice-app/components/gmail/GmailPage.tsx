@@ -412,9 +412,7 @@ export function GmailPage() {
             {fetching && (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  {fetchProgress
-                    ? `Processing ${fetchProgress.label} (${fetchProgress.current} of ${fetchProgress.total})...`
-                    : "Searching Gmail..."}
+                  {fetchProgress ? `${fetchProgress.label}...` : "Searching Gmail..."}
                 </p>
                 <Progress value={progressPercent} />
               </div>
