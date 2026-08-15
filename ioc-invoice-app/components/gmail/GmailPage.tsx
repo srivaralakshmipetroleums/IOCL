@@ -52,21 +52,112 @@ interface BulkFetchResult {
 }
 
 interface FetchProgress {
-  current: number;
-  total: number;
   label: string;
+  monthCurrent?: number;
+  monthTotal?: number;
+  emailCurrent?: number;
+  emailTotal?: number;
 }
 
-async function fetchMonth(year: number, month: number): Promise<FetchResult> {
-  const res = await fetch("/api/gmail/fetch", {
+async function postGmailApi<T>(url: string, body: Record<string, unknown>): Promise<T> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ year, month, extractorMode: "claude" }),
+    body: JSON.stringify(body),
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Fetch failed");
+  const text = await res.text();
+  let data: T & { error?: string };
+
+  try {
+    data = JSON.parse(text) as T & { error?: string };
+  } catch {
+    throw new Error(
+      text.trim().slice(0, 200) || `Request failed (${res.status} ${res.statusText})`
+    );
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || text.trim().slice(0, 200) || `Request failed (${res.status})`);
+  }
+
   return data;
+}
+
+interface GmailScanResponse {
+  jobId: string;
+  query: string;
+  emailsFound: number;
+  skippedAlready: number;
+  pendingMessageIds: string[];
+}
+
+interface GmailProcessResponse {
+  pdfsDownloaded: number;
+  invoicesCompleted: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}
+
+async function fetchMonth(
+  year: number,
+  month: number,
+  onProgress?: (progress: FetchProgress) => void
+): Promise<FetchResult> {
+  const scan = await postGmailApi<GmailScanResponse>("/api/gmail/fetch/scan", { year, month });
+
+  const result: FetchResult = {
+    jobId: scan.jobId,
+    query: scan.query,
+    emailsFound: scan.emailsFound,
+    pdfsDownloaded: 0,
+    invoicesCompleted: 0,
+    skipped: scan.skippedAlready,
+    failed: 0,
+    errors: [],
+  };
+
+  const total = scan.pendingMessageIds.length;
+
+  for (let i = 0; i < scan.pendingMessageIds.length; i++) {
+    const messageId = scan.pendingMessageIds[i];
+    onProgress?.({
+      label: `Processing email ${i + 1} of ${total}`,
+      emailCurrent: i + 1,
+      emailTotal: total,
+    });
+
+    try {
+      const partial = await postGmailApi<GmailProcessResponse>("/api/gmail/fetch/process", {
+        jobId: scan.jobId,
+        messageId,
+        year,
+        month,
+        extractorMode: "claude",
+      });
+
+      result.pdfsDownloaded += partial.pdfsDownloaded;
+      result.invoicesCompleted += partial.invoicesCompleted;
+      result.skipped += partial.skipped;
+      result.failed += partial.failed;
+      result.errors.push(...partial.errors);
+    } catch (err) {
+      result.failed++;
+      result.errors.push(err instanceof Error ? err.message : "Processing failed");
+    }
+  }
+
+  await postGmailApi("/api/gmail/fetch/finalize", {
+    jobId: scan.jobId,
+    emailsFound: result.emailsFound,
+    pdfsDownloaded: result.pdfsDownloaded,
+    invoicesCompleted: result.invoicesCompleted,
+    skipped: result.skipped,
+    failed: result.failed,
+  });
+
+  return result;
 }
 
 export function GmailPage() {
@@ -108,7 +199,9 @@ export function GmailPage() {
     setFetchProgress(null);
 
     try {
-      const data = await fetchMonth(year, month);
+      const data = await fetchMonth(year, month, (progress) => {
+        setFetchProgress(progress);
+      });
       setResult(data);
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "Fetch failed");
@@ -138,10 +231,17 @@ export function GmailPage() {
     try {
       for (let i = 0; i < months.length; i++) {
         const { year: y, month: m, label } = months[i];
-        setFetchProgress({ current: i + 1, total: months.length, label });
 
         try {
-          const monthResult = await fetchMonth(y, m);
+          const monthResult = await fetchMonth(y, m, (progress) => {
+            setFetchProgress({
+              ...progress,
+              label: `${label} — ${progress.label}`,
+              monthCurrent: i + 1,
+              monthTotal: months.length,
+            });
+          });
+
           aggregated.monthsProcessed++;
           aggregated.emailsFound += monthResult.emailsFound;
           aggregated.pdfsDownloaded += monthResult.pdfsDownloaded;
@@ -149,7 +249,11 @@ export function GmailPage() {
           aggregated.skipped += monthResult.skipped;
           aggregated.failed += monthResult.failed;
           aggregated.errors.push(...monthResult.errors);
-          aggregated.monthResults.push({ label, success: true, result: monthResult });
+          aggregated.monthResults.push({
+            label,
+            success: monthResult.failed === 0 || monthResult.invoicesCompleted > 0,
+            result: monthResult,
+          });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Fetch failed";
           aggregated.monthResults.push({ label, success: false, error: message });
@@ -164,11 +268,13 @@ export function GmailPage() {
     }
   }
 
-  const progressPercent = fetchProgress
-    ? Math.round((fetchProgress.current / fetchProgress.total) * 100)
-    : fetching
-      ? 50
-      : 0;
+  const progressPercent = fetchProgress?.emailCurrent && fetchProgress.emailTotal
+    ? Math.round((fetchProgress.emailCurrent / fetchProgress.emailTotal) * 100)
+    : fetchProgress?.monthCurrent && fetchProgress.monthTotal
+      ? Math.round((fetchProgress.monthCurrent / fetchProgress.monthTotal) * 100)
+      : fetching
+        ? 10
+        : 0;
 
   const canFetch = status?.connected && status.claudeConfigured && !fetching;
 
@@ -299,8 +405,8 @@ export function GmailPage() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Bulk fetch processes each month one by one. Already-processed emails are skipped automatically.
-              This may take several minutes depending on invoice volume.
+              Each email is processed separately to avoid timeouts. Already-processed emails are skipped automatically.
+              Re-run a month to fetch any invoices that were missed.
             </p>
 
             {fetching && (
@@ -343,7 +449,9 @@ export function GmailPage() {
             {bulkResult && (
               <div className="space-y-3 rounded-md border p-4 text-sm">
                 <p className="font-medium">Last 6 months — summary</p>
-                <p>{bulkResult.monthsProcessed} of 6 months processed successfully</p>
+                <p>
+                  {bulkResult.monthResults.filter((entry) => entry.success).length} of 6 months completed with invoices
+                </p>
                 <p>{bulkResult.emailsFound} emails found</p>
                 <p>{bulkResult.pdfsDownloaded} PDFs downloaded</p>
                 <p>{bulkResult.invoicesCompleted} invoices completed</p>
@@ -364,11 +472,14 @@ export function GmailPage() {
                             {entry.result?.invoicesCompleted ?? 0} completed
                           </Badge>
                         ) : (
-                          <Badge variant="warning">Failed</Badge>
+                          <Badge variant="warning">
+                            {entry.result?.invoicesCompleted ? `${entry.result.invoicesCompleted} completed` : "Failed"}
+                          </Badge>
                         )}
-                        {entry.success && entry.result && (
+                        {entry.result && (
                           <span className="text-xs text-muted-foreground">
                             {entry.result.emailsFound} emails, {entry.result.skipped} skipped
+                            {entry.result.failed > 0 ? `, ${entry.result.failed} errors` : ""}
                           </span>
                         )}
                         {!entry.success && entry.error && (

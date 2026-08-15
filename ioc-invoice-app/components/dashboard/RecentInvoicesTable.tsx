@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge";
+import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface InvoiceRow {
@@ -16,12 +17,28 @@ interface InvoiceRow {
 }
 
 export function RecentInvoicesTable() {
-  const { data, isLoading } = useQuery<{ data: InvoiceRow[] }>({
-    queryKey: ["recent-invoices"],
-    queryFn: () => fetch("/api/invoices?pageSize=5&page=1").then((r) => r.json()),
+  const { period } = useDashboardPeriod()!;
+  const params = new URLSearchParams({
+    pageSize: "5",
+    page: "1",
+    dateFrom: period.dateFrom,
+    dateTo: period.dateTo,
   });
 
-  const items = data?.data ?? [];
+  const { data, isLoading } = useQuery<{ data: InvoiceRow[] }>({
+    queryKey: [
+      "recent-invoices",
+      period.dateFrom,
+      period.dateTo,
+      period.months?.join(",") ?? "",
+    ],
+    queryFn: () => fetch(`/api/invoices?${params}`).then((r) => r.json()),
+  });
+
+  const items = (data?.data ?? []).filter((invoice) => {
+    if (!period.months?.length || !invoice.invoice_date) return true;
+    return period.months.includes(invoice.invoice_date.slice(0, 7));
+  });
 
   return (
     <div className="ioc-card overflow-hidden">

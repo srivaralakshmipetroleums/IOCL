@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { SectionTitle } from "@/components/dashboard/DashboardParts";
+import { DashboardPeriodSelector } from "@/components/dashboard/DashboardPeriodSelector";
 import { KpiCards } from "@/components/dashboard/KpiCards";
 import { LineItemsTable, type LineItemRow } from "@/components/dashboard/LineItemsTable";
 import { MonthlyCountChart } from "@/components/dashboard/MonthlyCountChart";
@@ -13,12 +14,8 @@ import { TimelineCharts, QuantityTimelineChart } from "@/components/dashboard/Ti
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
-import {
-  getCurrentMonthRange,
-  getMonthRange,
-  monthInputValue,
-  monthLabelFromRange,
-} from "@/lib/dashboard/filters";
+import { buildDashboardQueryString } from "@/lib/dashboard/filters";
+import { getPreviousComparisonPeriod } from "@/lib/dashboard/period";
 
 interface DashboardSummary {
   invoiceCount: number;
@@ -26,13 +23,6 @@ interface DashboardSummary {
   totalQuantity: number;
   lineItemCount: number;
   avgPerInvoice: number;
-}
-
-function getPrevMonthRange(dateFrom: string) {
-  const [year, month] = dateFrom.split("-").map(Number);
-  const prevMonth = month === 1 ? 12 : month - 1;
-  const prevYear = month === 1 ? year - 1 : year;
-  return getMonthRange(prevYear, prevMonth);
 }
 
 function calcTrend(current: number, previous: number, vsLabel: string) {
@@ -44,74 +34,56 @@ function calcTrend(current: number, previous: number, vsLabel: string) {
 }
 
 export function DashboardPage() {
-  const initial = getCurrentMonthRange();
-  const [dateFrom, setDateFrom] = useState(initial.dateFrom);
-  const [dateTo, setDateTo] = useState(initial.dateTo);
-  const periodCtx = useDashboardPeriod();
-  const queryClient = useQueryClient();
+  const { period, refreshDashboard, isRefreshing } = useDashboardPeriod()!;
 
-  const qs = useMemo(() => new URLSearchParams({ dateFrom, dateTo }).toString(), [dateFrom, dateTo]);
-  const prevRange = useMemo(() => getPrevMonthRange(dateFrom), [dateFrom]);
+  const qs = useMemo(() => buildDashboardQueryString(period), [period]);
+  const prevPeriod = useMemo(() => getPreviousComparisonPeriod(period), [period]);
   const prevQs = useMemo(
-    () => new URLSearchParams({ dateFrom: prevRange.dateFrom, dateTo: prevRange.dateTo }).toString(),
-    [prevRange]
+    () => (prevPeriod ? buildDashboardQueryString(prevPeriod) : ""),
+    [prevPeriod]
   );
-  const vsLabel = `vs ${monthLabelFromRange(prevRange.dateFrom)}`;
+  const vsLabel = prevPeriod ? `vs ${prevPeriod.label}` : "";
 
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
-    queryKey: ["dashboard-summary", dateFrom, dateTo],
+    queryKey: ["dashboard-summary", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
     queryFn: () => fetch(`/api/dashboard/summary?${qs}`).then((r) => r.json()),
   });
 
   const { data: prevSummary } = useQuery<DashboardSummary>({
-    queryKey: ["dashboard-summary", prevRange.dateFrom, prevRange.dateTo],
+    queryKey: [
+      "dashboard-summary",
+      prevPeriod?.dateFrom,
+      prevPeriod?.dateTo,
+      prevPeriod?.months?.join(",") ?? "",
+    ],
     queryFn: () => fetch(`/api/dashboard/summary?${prevQs}`).then((r) => r.json()),
+    enabled: Boolean(prevPeriod),
   });
 
   const { data: valueByDate = [] } = useQuery<Array<{ date: string; value: number }>>({
-    queryKey: ["dashboard-value", dateFrom, dateTo],
+    queryKey: ["dashboard-value", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
     queryFn: () => fetch(`/api/dashboard/value-by-date?${qs}`).then((r) => r.json()),
   });
 
   const { data: quantityByDate = [] } = useQuery<Array<{ date: string; quantity: number }>>({
-    queryKey: ["dashboard-qty-date", dateFrom, dateTo],
+    queryKey: ["dashboard-qty-date", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
     queryFn: () => fetch(`/api/dashboard/quantity-by-date?${qs}`).then((r) => r.json()),
   });
 
   const { data: productQuantity = [] } = useQuery<Array<{ product: string; quantity: number }>>({
-    queryKey: ["dashboard-product-qty", dateFrom, dateTo],
+    queryKey: ["dashboard-product-qty", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
     queryFn: () => fetch(`/api/dashboard/product-quantity?${qs}`).then((r) => r.json()),
   });
 
   const { data: productValue = [] } = useQuery<Array<{ product: string; value: number }>>({
-    queryKey: ["dashboard-product-value", dateFrom, dateTo],
+    queryKey: ["dashboard-product-value", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
     queryFn: () => fetch(`/api/dashboard/product-value?${qs}`).then((r) => r.json()),
   });
 
   const { data: lineItems = [], isLoading: lineItemsLoading } = useQuery<LineItemRow[]>({
-    queryKey: ["dashboard-line-items", dateFrom, dateTo],
+    queryKey: ["dashboard-line-items", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
     queryFn: () => fetch(`/api/dashboard/line-items?${qs}`).then((r) => r.json()),
   });
-
-  function handleMonthChange(value: string) {
-    if (!value) return;
-    const [year, month] = value.split("-").map(Number);
-    const range = getMonthRange(year, month);
-    setDateFrom(range.dateFrom);
-    setDateTo(range.dateTo);
-    periodCtx?.setPeriodFromDate(range.dateFrom);
-  }
-
-  function handleRefresh() {
-    queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard-value"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard-qty-date"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard-product-qty"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard-product-value"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard-line-items"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard-monthly"] });
-    queryClient.invalidateQueries({ queryKey: ["recent-invoices"] });
-  }
 
   const trends = prevSummary
     ? {
@@ -124,28 +96,18 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <PageTitle>Dashboard</PageTitle>
 
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
-          <div>
-            <label
-              htmlFor="period-month"
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ioc-muted"
-            >
-              Period
-            </label>
-            <input
-              id="period-month"
-              type="month"
-              value={monthInputValue(dateFrom)}
-              onChange={(e) => handleMonthChange(e.target.value)}
-              className="rounded-[10px] border border-ioc-border bg-white px-3.5 py-2 text-sm shadow-sm outline-none focus:border-ioc-blue focus:ring-2 focus:ring-ioc-blue/20"
-            />
-          </div>
-          <Button onClick={handleRefresh} className="w-full sm:w-auto sm:mb-0.5">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
+        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[360px]">
+          <DashboardPeriodSelector />
+          <Button
+            onClick={() => refreshDashboard()}
+            disabled={isRefreshing}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </div>

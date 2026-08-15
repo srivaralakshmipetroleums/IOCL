@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createServiceClient } from "@/lib/supabase/server";
+import { getDashboardFilters } from "@/lib/dashboard/filters";
+import { getFilteredInvoices } from "@/lib/dashboard/query-helpers";
 
 export async function GET(request: NextRequest) {
   const { user, response } = await requireAuth();
   if (!user) return response!;
 
+  const filters = getDashboardFilters(request.nextUrl.searchParams);
   const supabase = await createServiceClient();
-
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("invoice_date")
-    .eq("status", "APPROVED");
+  const invoices = await getFilteredInvoices(supabase, filters);
 
   const grouped: Record<string, number> = {};
-  for (const inv of invoices || []) {
+  for (const inv of invoices) {
     if (!inv.invoice_date) continue;
     const month = inv.invoice_date.slice(0, 7);
     grouped[month] = (grouped[month] || 0) + 1;

@@ -2,7 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { IOC_CHART } from "@/lib/dashboard/constants";
+import { buildDashboardQueryString } from "@/lib/dashboard/filters";
 
 interface MonthlyPoint {
   month: string;
@@ -16,9 +18,12 @@ function formatMonthLabel(month: string) {
 }
 
 export function MonthlyCountChart() {
+  const { period } = useDashboardPeriod()!;
+  const qs = buildDashboardQueryString(period);
+
   const { data = [], isLoading } = useQuery<MonthlyPoint[]>({
-    queryKey: ["dashboard-monthly"],
-    queryFn: () => fetch("/api/dashboard/monthly-count").then((r) => r.json()),
+    queryKey: ["dashboard-monthly", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
+    queryFn: () => fetch(`/api/dashboard/monthly-count?${qs}`).then((r) => r.json()),
   });
 
   const chartData = data.slice(-7).map((d) => ({

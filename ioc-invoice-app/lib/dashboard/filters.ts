@@ -3,20 +3,29 @@ export interface DashboardFilters {
   dateTo?: string;
   supplier?: string;
   product?: string;
+  months?: string[];
 }
 
 export function getDashboardFilters(params: URLSearchParams): DashboardFilters {
+  const monthsParam = params.get("months");
   return {
     dateFrom: params.get("dateFrom") || undefined,
     dateTo: params.get("dateTo") || undefined,
     supplier: params.get("supplier") || undefined,
     product: params.get("product") || undefined,
+    months: monthsParam ? monthsParam.split(",").filter(Boolean) : undefined,
   };
 }
 
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+/** Inclusive calendar month range using local dates (avoids UTC timezone shifts). */
 export function getMonthRange(year: number, month: number): { dateFrom: string; dateTo: string } {
-  const dateFrom = new Date(year, month - 1, 1).toISOString().split("T")[0];
-  const dateTo = new Date(year, month, 0).toISOString().split("T")[0];
+  const dateFrom = `${year}-${pad2(month)}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const dateTo = `${year}-${pad2(month)}-${pad2(lastDay)}`;
   return { dateFrom, dateTo };
 }
 
@@ -39,4 +48,19 @@ export function monthLabelFromRange(dateFrom: string): string {
     month: "long",
     year: "numeric",
   });
+}
+
+export function buildDashboardQueryString(period: {
+  dateFrom: string;
+  dateTo: string;
+  months?: string[];
+}) {
+  const params = new URLSearchParams({
+    dateFrom: period.dateFrom,
+    dateTo: period.dateTo,
+  });
+  if (period.months?.length) {
+    params.set("months", period.months.join(","));
+  }
+  return params.toString();
 }

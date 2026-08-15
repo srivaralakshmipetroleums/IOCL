@@ -23,7 +23,16 @@ export async function getFilteredInvoices(
   if (filters.supplier) query = query.ilike("supplier_name", `%${filters.supplier}%`);
 
   const { data } = await query.order("invoice_date");
-  return data || [];
+  let invoices = data || [];
+
+  if (filters.months?.length) {
+    const allowed = new Set(filters.months);
+    invoices = invoices.filter(
+      (invoice) => invoice.invoice_date && allowed.has(invoice.invoice_date.slice(0, 7))
+    );
+  }
+
+  return invoices;
 }
 
 export async function getFilteredLineItems(

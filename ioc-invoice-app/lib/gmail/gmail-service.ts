@@ -118,130 +118,74 @@ export interface GmailFetchResult {
   errors: string[];
 }
 
-export async function fetchGmailInvoices(
+export interface GmailScanResult {
+  jobId: string;
+  query: string;
+  emailsFound: number;
+  skippedAlready: number;
+  pendingMessageIds: string[];
+}
+
+export interface GmailMessageProcessResult {
+  pdfsDownloaded: number;
+  invoicesCompleted: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}
+
+async function listGmailMessageIds(
+  gmail: gmail_v1.Gmail,
+  query: string
+): Promise<string[]> {
+  const messageIds: string[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const listRes = await gmail.users.messages.list({
+      userId: "me",
+      q: query,
+      maxResults: 100,
+      pageToken,
+    });
+
+    messageIds.push(...(listRes.data.messages?.map((m) => m.id!).filter(Boolean) || []));
+    pageToken = listRes.data.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  return messageIds;
+}
+
+export async function scanGmailMonth(
   userId: string,
   year: number,
-  month: number,
-  extractorMode: ExtractorMode = "auto"
-): Promise<GmailFetchResult> {
+  month: number
+): Promise<GmailScanResult> {
   const config = getGmailInvoiceConfig();
   const query = buildGmailSearchQuery(year, month, config);
   const period = getMonthDateRange(year, month);
   const gmail = await getAuthenticatedGmailClient(userId);
+  const messageIds = await listGmailMessageIds(gmail, query);
 
-  const listRes = await gmail.users.messages.list({
-    userId: "me",
-    q: query,
-    maxResults: 100,
-  });
-
-  const messageIds = listRes.data.messages?.map((m) => m.id!).filter(Boolean) || [];
-  const errors: string[] = [];
-  let pdfsDownloaded = 0;
-  let invoicesCompleted = 0;
-  let skipped = 0;
-  let failed = 0;
-
-  const jobId = await processingService.createJob(userId, messageIds.length, period, "GMAIL_FETCH");
+  let skippedAlready = 0;
+  const pendingMessageIds: string[] = [];
 
   for (const messageId of messageIds) {
     if (await isMessageAlreadyProcessed(messageId)) {
-      skipped++;
-      continue;
-    }
-
-    try {
-      const msgRes = await gmail.users.messages.get({
-        userId: "me",
-        id: messageId,
-        format: "full",
-      });
-
-      const pdfs = getPdfAttachments(msgRes.data);
-      if (!pdfs.length) {
-        skipped++;
-        continue;
-      }
-
-      for (const pdf of pdfs) {
-        const attachmentRes = await gmail.users.messages.attachments.get({
-          userId: "me",
-          messageId,
-          id: pdf.attachmentId,
-        });
-
-        const data = attachmentRes.data.data;
-        if (!data) {
-          failed++;
-          errors.push(`No data for attachment ${pdf.filename} in message ${messageId}`);
-          continue;
-        }
-
-        const buffer = Buffer.from(data, "base64url");
-        pdfsDownloaded++;
-
-        const itemId = await processingService.addJobItem(jobId, pdf.filename);
-        const invoiceId = crypto.randomUUID();
-        const now = new Date();
-        const storagePath = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${invoiceId}.pdf`;
-
-        const supabase = await createServiceClient();
-        const { error: uploadError } = await supabase.storage
-          .from("invoice-pdfs")
-          .upload(storagePath, buffer, { contentType: "application/pdf", upsert: true });
-
-        if (uploadError) {
-          failed++;
-          errors.push(uploadError.message);
-          continue;
-        }
-
-        await processingService.updateJobItem(itemId, {
-          storage_path: storagePath,
-          status: "UPLOADED",
-        });
-
-        try {
-          const result = await processingService.processItem(itemId, storagePath, {
-            extractorMode,
-            period,
-          });
-
-          // Tag invoice with Gmail source
-          if (result.invoiceId) {
-            await supabase
-              .from("invoices")
-              .update({
-                source_type: "GMAIL",
-                source_message_id: messageId,
-              })
-              .eq("id", result.invoiceId);
-          }
-
-          if (result.status === "COMPLETED") invoicesCompleted++;
-          else if (result.status === "SKIPPED" || result.status === "DUPLICATE") skipped++;
-        } catch (err) {
-          failed++;
-          errors.push(err instanceof Error ? err.message : "Processing failed");
-        }
-      }
-    } catch (err) {
-      failed++;
-      errors.push(err instanceof Error ? err.message : `Failed message ${messageId}`);
+      skippedAlready++;
+    } else {
+      pendingMessageIds.push(messageId);
     }
   }
 
+  const jobId = await processingService.createJob(userId, messageIds.length, period, "GMAIL_FETCH");
   const supabase = await createServiceClient();
   await supabase
     .from("processing_jobs")
     .update({
-      status: failed > 0 && invoicesCompleted === 0 ? "FAILED" : "COMPLETED",
-      total_files: messageIds.length,
-      processed_files: messageIds.length,
-      successful_files: invoicesCompleted,
-      failed_files: failed,
-      skipped_files: skipped,
-      completed_at: new Date().toISOString(),
+      status: "PROCESSING",
+      started_at: new Date().toISOString(),
+      skipped_files: skippedAlready,
     })
     .eq("id", jobId);
 
@@ -249,10 +193,174 @@ export async function fetchGmailInvoices(
     jobId,
     query,
     emailsFound: messageIds.length,
+    skippedAlready,
+    pendingMessageIds,
+  };
+}
+
+export async function processGmailMessage(
+  userId: string,
+  jobId: string,
+  messageId: string,
+  year: number,
+  month: number,
+  extractorMode: ExtractorMode = "auto"
+): Promise<GmailMessageProcessResult> {
+  const period = getMonthDateRange(year, month);
+  const gmail = await getAuthenticatedGmailClient(userId);
+  const errors: string[] = [];
+  let pdfsDownloaded = 0;
+  let invoicesCompleted = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  if (await isMessageAlreadyProcessed(messageId)) {
+    return { pdfsDownloaded, invoicesCompleted, skipped: 1, failed, errors };
+  }
+
+  try {
+    const msgRes = await gmail.users.messages.get({
+      userId: "me",
+      id: messageId,
+      format: "full",
+    });
+
+    const pdfs = getPdfAttachments(msgRes.data);
+    if (!pdfs.length) {
+      return { pdfsDownloaded, invoicesCompleted, skipped: 1, failed, errors };
+    }
+
+    for (const pdf of pdfs) {
+      const attachmentRes = await gmail.users.messages.attachments.get({
+        userId: "me",
+        messageId,
+        id: pdf.attachmentId,
+      });
+
+      const data = attachmentRes.data.data;
+      if (!data) {
+        failed++;
+        errors.push(`No data for attachment ${pdf.filename} in message ${messageId}`);
+        continue;
+      }
+
+      const buffer = Buffer.from(data, "base64url");
+      pdfsDownloaded++;
+
+      const itemId = await processingService.addJobItem(jobId, pdf.filename);
+      const invoiceId = crypto.randomUUID();
+      const now = new Date();
+      const storagePath = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${invoiceId}.pdf`;
+
+      const supabase = await createServiceClient();
+      const { error: uploadError } = await supabase.storage
+        .from("invoice-pdfs")
+        .upload(storagePath, buffer, { contentType: "application/pdf", upsert: true });
+
+      if (uploadError) {
+        failed++;
+        errors.push(uploadError.message);
+        continue;
+      }
+
+      await processingService.updateJobItem(itemId, {
+        storage_path: storagePath,
+        status: "UPLOADED",
+      });
+
+      try {
+        const result = await processingService.processItem(itemId, storagePath, {
+          extractorMode,
+          period,
+        });
+
+        if (result.invoiceId) {
+          await supabase
+            .from("invoices")
+            .update({
+              source_type: "GMAIL",
+              source_message_id: messageId,
+            })
+            .eq("id", result.invoiceId);
+        }
+
+        if (result.status === "COMPLETED") invoicesCompleted++;
+        else if (result.status === "SKIPPED" || result.status === "DUPLICATE") skipped++;
+      } catch (err) {
+        failed++;
+        errors.push(err instanceof Error ? err.message : "Processing failed");
+      }
+    }
+  } catch (err) {
+    failed++;
+    errors.push(err instanceof Error ? err.message : `Failed message ${messageId}`);
+  }
+
+  return { pdfsDownloaded, invoicesCompleted, skipped, failed, errors };
+}
+
+export async function finalizeGmailFetchJob(
+  jobId: string,
+  result: Pick<
+    GmailFetchResult,
+    "emailsFound" | "pdfsDownloaded" | "invoicesCompleted" | "skipped" | "failed"
+  >
+): Promise<void> {
+  const supabase = await createServiceClient();
+  await supabase
+    .from("processing_jobs")
+    .update({
+      status: result.failed > 0 && result.invoicesCompleted === 0 ? "FAILED" : "COMPLETED",
+      total_files: result.emailsFound,
+      processed_files: result.emailsFound,
+      successful_files: result.invoicesCompleted,
+      failed_files: result.failed,
+      skipped_files: result.skipped,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", jobId);
+}
+
+export async function fetchGmailInvoices(
+  userId: string,
+  year: number,
+  month: number,
+  extractorMode: ExtractorMode = "auto"
+): Promise<GmailFetchResult> {
+  const scan = await scanGmailMonth(userId, year, month);
+  const errors: string[] = [];
+  let pdfsDownloaded = 0;
+  let invoicesCompleted = 0;
+  let skipped = scan.skippedAlready;
+  let failed = 0;
+
+  for (const messageId of scan.pendingMessageIds) {
+    const partial = await processGmailMessage(
+      userId,
+      scan.jobId,
+      messageId,
+      year,
+      month,
+      extractorMode
+    );
+    pdfsDownloaded += partial.pdfsDownloaded;
+    invoicesCompleted += partial.invoicesCompleted;
+    skipped += partial.skipped;
+    failed += partial.failed;
+    errors.push(...partial.errors);
+  }
+
+  const result: GmailFetchResult = {
+    jobId: scan.jobId,
+    query: scan.query,
+    emailsFound: scan.emailsFound,
     pdfsDownloaded,
     invoicesCompleted,
     skipped,
     failed,
     errors,
   };
+
+  await finalizeGmailFetchJob(scan.jobId, result);
+  return result;
 }
