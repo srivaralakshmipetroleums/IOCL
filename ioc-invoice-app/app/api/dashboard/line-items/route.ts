@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const invoices = await getFilteredInvoices(supabase, filters);
   const invoiceMap = new Map(invoices.map((i) => [i.id, i]));
   const invoiceIds = invoices.map((i) => i.id);
-  const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product);
+  const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product, invoices);
 
   const rows = lineItems.map((item) => {
     const invoice = invoiceMap.get(item.invoice_id);

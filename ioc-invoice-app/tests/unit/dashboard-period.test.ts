@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getMonthRange } from "@/lib/dashboard/filters";
+import { getMonthRange, listMonthsInPeriod } from "@/lib/dashboard/filters";
 import {
   getCurrentMonthPeriod,
   getFinancialYearPeriod,
@@ -14,6 +14,13 @@ describe("dashboard filters", () => {
       dateFrom: "2026-03-01",
       dateTo: "2026-03-31",
     });
+  });
+
+  it("listMonthsInPeriod returns every month in a financial year", () => {
+    const months = listMonthsInPeriod("2025-04-01", "2026-03-31");
+    expect(months).toHaveLength(12);
+    expect(months[0]).toBe("2025-04");
+    expect(months[11]).toBe("2026-03");
   });
 });
 

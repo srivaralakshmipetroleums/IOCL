@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getDashboardFilters } from "@/lib/dashboard/filters";
+import { getDashboardFilters, listMonthsInPeriod } from "@/lib/dashboard/filters";
 import { getFilteredInvoices } from "@/lib/dashboard/query-helpers";
 
 export async function GET(request: NextRequest) {
   const { user, response } = await requireAuth();
   if (!user) return response!;
 
-  const filters = getDashboardFilters(request.nextUrl.searchParams);
+  const params = request.nextUrl.searchParams;
+  const filters = getDashboardFilters(params);
+  const dateFrom = params.get("dateFrom") || filters.dateFrom;
+  const dateTo = params.get("dateTo") || filters.dateTo;
+
+  if (!dateFrom || !dateTo) {
+    return NextResponse.json({ error: "dateFrom and dateTo are required" }, { status: 400 });
+  }
+
   const supabase = await createServiceClient();
   const invoices = await getFilteredInvoices(supabase, filters);
 
@@ -19,9 +27,11 @@ export async function GET(request: NextRequest) {
     grouped[month] = (grouped[month] || 0) + 1;
   }
 
-  return NextResponse.json(
-    Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, count]) => ({ month, count }))
-  );
+  const monthKeys = listMonthsInPeriod(dateFrom, dateTo, filters.months);
+  const result = monthKeys.map((month) => ({
+    month,
+    count: grouped[month] ?? 0,
+  }));
+
+  return NextResponse.json(result);
 }

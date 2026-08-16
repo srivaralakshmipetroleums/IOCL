@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   const invoices = await getFilteredInvoices(supabase, filters);
   const invoiceIds = invoices.map((i) => i.id);
-  const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product);
+  const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product, invoices);
 
   const fuelInvoiceIds = new Set(lineItems.map((item) => item.invoice_id));
   const invoiceCount = fuelInvoiceIds.size;

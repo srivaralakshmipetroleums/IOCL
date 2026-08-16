@@ -36,6 +36,7 @@ export function DashboardPeriodProvider({ children }: { children: ReactNode }) {
             key === "dashboard-product-value" ||
             key === "dashboard-line-items" ||
             key === "dashboard-monthly" ||
+            key === "dashboard-analytics" ||
             key === "recent-invoices"
           );
         },

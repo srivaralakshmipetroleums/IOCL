@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
@@ -27,24 +28,37 @@ export function MonthlyCountChart() {
     queryFn: () => fetchDashboardJson(`/api/dashboard/monthly-count?${qs}`),
   });
 
-  const chartData = data.slice(-7).map((d) => ({
-    ...d,
-    label: formatMonthLabel(d.month),
-  }));
+  const chartData = useMemo(
+    () =>
+      data.map((d) => ({
+        ...d,
+        label: formatMonthLabel(d.month),
+      })),
+    [data]
+  );
+
+  const useAngledLabels = chartData.length > 6;
 
   return (
     <div className="ioc-card p-5">
       <h3 className="mb-4 text-sm font-semibold text-ioc-navy">Monthly Invoice Count</h3>
-      <div className="h-64">
+      <div className={useAngledLabels ? "h-72" : "h-64"}>
         {isLoading ? (
           <div className="flex h-full items-center justify-center text-sm text-ioc-muted">Loading…</div>
         ) : chartData.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-ioc-muted">No data</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
+            <BarChart data={chartData} margin={{ bottom: useAngledLabels ? 20 : 0 }}>
               <CartesianGrid stroke="var(--ioc-border)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ioc-text-secondary)" }} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fill: "var(--ioc-text-secondary)" }}
+                interval={0}
+                angle={useAngledLabels ? -40 : 0}
+                textAnchor={useAngledLabels ? "end" : "middle"}
+                height={useAngledLabels ? 56 : 30}
+              />
               <YAxis tick={{ fontSize: 11, fill: "var(--ioc-text-secondary)" }} allowDecimals={false} />
               <Tooltip
                 contentStyle={{

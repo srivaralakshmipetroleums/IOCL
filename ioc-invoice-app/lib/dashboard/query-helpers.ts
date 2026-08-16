@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DashboardFilters } from "./filters";
 import { DASHBOARD_INVOICE_STATUSES } from "./constants";
 import { isFuelProduct } from "./fuel-products";
+import { allocateFuelInvoiceValues } from "./fuel-line-values";
 
 export interface FilteredInvoice {
   id: string;
@@ -40,7 +41,8 @@ export async function getFilteredInvoices(
 export async function getFilteredLineItems(
   supabase: SupabaseClient,
   invoiceIds: string[],
-  productFilter?: string
+  productFilter?: string,
+  invoices?: Pick<FilteredInvoice, "id" | "invoice_total">[]
 ) {
   if (!invoiceIds.length) return [];
 
@@ -52,5 +54,22 @@ export async function getFilteredLineItems(
   if (productFilter) query = query.ilike("product", `%${productFilter}%`);
 
   const { data } = await query;
-  return (data || []).filter((item) => isFuelProduct(item.product));
+  const fuelItems = (data || []).filter((item) => isFuelProduct(item.product));
+  if (!invoices?.length) return fuelItems;
+
+  const { data: allItems } = await supabase
+    .from("invoice_line_items")
+    .select("invoice_id, product, invoice_value")
+    .in("invoice_id", invoiceIds);
+
+  const adjustedValues = allocateFuelInvoiceValues(
+    fuelItems,
+    allItems || [],
+    invoices
+  );
+
+  return fuelItems.map((item) => ({
+    ...item,
+    invoice_value: adjustedValues.get(item.id) ?? item.invoice_value,
+  }));
 }

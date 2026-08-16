@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductTag } from "@/components/dashboard/DashboardParts";
 import { FUEL_PRODUCTS } from "@/lib/dashboard/fuel-products";
 import { formatCurrencyINR, formatIndianNumber } from "@/lib/dashboard/format";
 import { matchesDateSearch, parseMonthSearch, parseSearchDate } from "@/lib/search/date-search";
+import { Button } from "@/components/ui/button";
 
 export interface LineItemRow {
   id: string;
@@ -24,6 +25,18 @@ type SortKey = keyof Pick<
   "invoice_date" | "supplier" | "bill_no" | "product" | "invoice_value" | "hsn_code" | "quantity_litres"
 >;
 
+function monthKeyFromRow(row: LineItemRow): string {
+  return row.invoice_date_iso.slice(0, 7);
+}
+
+function formatMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
 interface LineItemsTableProps {
   items: LineItemRow[];
   isLoading?: boolean;
@@ -34,6 +47,7 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
   const [productFilter, setProductFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("invoice_date");
   const [sortAsc, setSortAsc] = useState(true);
+  const [pageIndex, setPageIndex] = useState(0);
 
   const products = useMemo(() => [...FUEL_PRODUCTS], []);
 
@@ -68,6 +82,28 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
         : String(bv).localeCompare(String(av));
     });
   }, [filtered, sortKey, sortAsc]);
+
+  const monthsInView = useMemo(() => {
+    const keys = new Set<string>();
+    for (const row of sorted) {
+      keys.add(monthKeyFromRow(row));
+    }
+    return [...keys].sort();
+  }, [sorted]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [monthsInView.join(",")]);
+
+  const safePageIndex = monthsInView.length
+    ? Math.min(pageIndex, monthsInView.length - 1)
+    : 0;
+  const currentMonth = monthsInView[safePageIndex];
+
+  const pageItems = useMemo(() => {
+    if (!currentMonth) return [];
+    return sorted.filter((row) => monthKeyFromRow(row) === currentMonth);
+  }, [sorted, currentMonth]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
@@ -111,6 +147,9 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
         </select>
         <span className="whitespace-nowrap rounded-full bg-ioc-navy px-3 py-1 text-xs font-semibold text-white">
           {sorted.length} rows
+          {monthsInView.length > 1 && currentMonth
+            ? ` · ${formatMonthLabel(currentMonth)}`
+            : ""}
         </span>
       </div>
 
@@ -139,14 +178,14 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
                   Loading line items…
                 </td>
               </tr>
-            ) : sorted.length === 0 ? (
+            ) : pageItems.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-ioc-muted">
                   No data found for this period.
                 </td>
               </tr>
             ) : (
-              sorted.map((row) => (
+              pageItems.map((row) => (
                 <tr
                   key={row.id}
                   className="border-b border-ioc-border transition-colors hover:bg-ioc-section"
@@ -172,6 +211,43 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
           </tbody>
         </table>
       </div>
+
+      {monthsInView.length > 1 && currentMonth && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ioc-border bg-ioc-section px-5 py-3">
+          <p className="text-sm text-ioc-muted">
+            <span className="font-medium text-ioc-navy">{formatMonthLabel(currentMonth)}</span>
+            {" · "}
+            {pageItems.length} row{pageItems.length === 1 ? "" : "s"}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPageIndex((index) => Math.max(0, index - 1))}
+              disabled={safePageIndex === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <span className="min-w-[88px] text-center text-sm font-medium text-ioc-navy">
+              Page {safePageIndex + 1} of {monthsInView.length}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPageIndex((index) => Math.min(monthsInView.length - 1, index + 1))
+              }
+              disabled={safePageIndex >= monthsInView.length - 1}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const invoices = await getFilteredInvoices(supabase, filters);
   const invoiceIds = invoices.map((i) => i.id);
-  const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product);
+  const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product, invoices);
 
   const grouped: Record<string, number> = {};
   for (const item of lineItems) {

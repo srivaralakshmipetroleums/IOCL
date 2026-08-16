@@ -64,3 +64,30 @@ export function buildDashboardQueryString(period: {
   }
   return params.toString();
 }
+
+/** All YYYY-MM keys from dateFrom through dateTo (inclusive), or an explicit months list. */
+export function listMonthsInPeriod(
+  dateFrom: string,
+  dateTo: string,
+  allowedMonths?: string[]
+): string[] {
+  if (allowedMonths?.length) return [...allowedMonths].sort();
+
+  const months: string[] = [];
+  const [startYear, startMonth] = dateFrom.slice(0, 7).split("-").map(Number);
+  const [endYear, endMonth] = dateTo.slice(0, 7).split("-").map(Number);
+
+  let year = startYear;
+  let month = startMonth;
+
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    months.push(`${year}-${String(month).padStart(2, "0")}`);
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+
+  return months;
+}
