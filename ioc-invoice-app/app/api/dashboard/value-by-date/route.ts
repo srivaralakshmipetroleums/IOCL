@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getDashboardFilters } from "@/lib/dashboard/filters";
-import { getFilteredInvoices } from "@/lib/dashboard/query-helpers";
+import { getFilteredInvoices, getFilteredLineItems } from "@/lib/dashboard/query-helpers";
 
 export async function GET(request: NextRequest) {
   const { user, response } = await requireAuth();
@@ -10,15 +10,23 @@ export async function GET(request: NextRequest) {
 
   const filters = getDashboardFilters(request.nextUrl.searchParams);
   const supabase = await createServiceClient();
+
   const invoices = await getFilteredInvoices(supabase, filters);
+  const invoiceMap = new Map(invoices.map((i) => [i.id, i.invoice_date]));
+  const invoiceIds = invoices.map((i) => i.id);
+  const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product);
 
   const grouped: Record<string, number> = {};
-  for (const row of invoices) {
-    const date = row.invoice_date || "unknown";
-    grouped[date] = (grouped[date] || 0) + (row.invoice_total || 0);
+  for (const item of lineItems) {
+    const date = invoiceMap.get(item.invoice_id);
+    if (!date || date === "unknown") continue;
+
+    grouped[date] = (grouped[date] || 0) + (item.invoice_value || 0);
   }
 
   return NextResponse.json(
-    Object.entries(grouped).map(([date, value]) => ({ date, value }))
+    Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, value]) => ({ date, value }))
   );
 }

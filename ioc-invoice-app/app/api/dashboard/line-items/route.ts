@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getDashboardFilters } from "@/lib/dashboard/filters";
 import { getFilteredInvoices, getFilteredLineItems } from "@/lib/dashboard/query-helpers";
+import { normalizeFuelProduct } from "@/lib/dashboard/fuel-products";
 import { formatDate } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
       invoice_date_iso: invoice?.invoice_date || "",
       supplier: invoice?.supplier_name || "—",
       bill_no: invoice?.invoice_number || "—",
-      product: item.product || "—",
+      product: normalizeFuelProduct(item.product) || "—",
       invoice_value: item.invoice_value ?? 0,
       hsn_code: item.hsn_code || "—",
       quantity_litres: item.output_quantity ?? 0,

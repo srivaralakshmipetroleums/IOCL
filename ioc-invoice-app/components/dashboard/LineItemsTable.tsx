@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { ProductTag } from "@/components/dashboard/DashboardParts";
+import { FUEL_PRODUCTS } from "@/lib/dashboard/fuel-products";
 import { formatCurrencyINR, formatIndianNumber } from "@/lib/dashboard/format";
 import { matchesDateSearch, parseMonthSearch, parseSearchDate } from "@/lib/search/date-search";
 
@@ -34,10 +35,7 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("invoice_date");
   const [sortAsc, setSortAsc] = useState(true);
 
-  const products = useMemo(
-    () => [...new Set(items.map((r) => r.product).filter(Boolean))].sort(),
-    [items]
-  );
+  const products = useMemo(() => [...FUEL_PRODUCTS], []);
 
   const filtered = useMemo(() => {
     const q = search.trim();
@@ -104,7 +102,7 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
           onChange={(e) => setProductFilter(e.target.value)}
           className="rounded-[10px] border border-ioc-border bg-white px-3.5 py-2 text-sm outline-none focus:border-ioc-blue"
         >
-          <option value="">All Products</option>
+          <option value="">All Products (EBMS & HSD-BSVI)</option>
           {products.map((p) => (
             <option key={p} value={p}>
               {p}

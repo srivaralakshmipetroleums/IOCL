@@ -151,7 +151,7 @@ export function DashboardPage() {
         <MonthlyCountChart />
       </div>
 
-      <SectionTitle>All Line Items</SectionTitle>
+      <SectionTitle>Fuel Line Items (EBMS & HSD-BSVI)</SectionTitle>
       <LineItemsTable items={lineItems} isLoading={lineItemsLoading} />
     </div>
   );

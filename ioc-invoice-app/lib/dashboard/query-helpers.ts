@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DashboardFilters } from "./filters";
 import { DASHBOARD_INVOICE_STATUSES } from "./constants";
+import { isFuelProduct } from "./fuel-products";
 
 export interface FilteredInvoice {
   id: string;
@@ -51,5 +52,5 @@ export async function getFilteredLineItems(
   if (productFilter) query = query.ilike("product", `%${productFilter}%`);
 
   const { data } = await query;
-  return data || [];
+  return (data || []).filter((item) => isFuelProduct(item.product));
 }

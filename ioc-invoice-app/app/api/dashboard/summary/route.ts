@@ -15,9 +15,10 @@ export async function GET(request: NextRequest) {
   const invoiceIds = invoices.map((i) => i.id);
   const lineItems = await getFilteredLineItems(supabase, invoiceIds, filters.product);
 
-  const totalValue = invoices.reduce((sum, i) => sum + (i.invoice_total || 0), 0);
-  const totalQuantity = lineItems.reduce((sum, i) => sum + (i.output_quantity || 0), 0);
-  const invoiceCount = invoices.length;
+  const fuelInvoiceIds = new Set(lineItems.map((item) => item.invoice_id));
+  const invoiceCount = fuelInvoiceIds.size;
+  const totalValue = lineItems.reduce((sum, item) => sum + (item.invoice_value || 0), 0);
+  const totalQuantity = lineItems.reduce((sum, item) => sum + (item.output_quantity || 0), 0);
   const avgPerInvoice = invoiceCount > 0 ? totalValue / invoiceCount : 0;
 
   return NextResponse.json({
