@@ -7,11 +7,27 @@ export interface GmailInvoiceConfig {
   requireAttachment: boolean;
 }
 
+export interface GmailRspConfig {
+  sender: string;
+  subject: string;
+  requireAttachment: boolean;
+  customerCode: string;
+}
+
 export function getGmailInvoiceConfig(): GmailInvoiceConfig {
   return {
     sender: process.env.GMAIL_INVOICE_SENDER || "B2BPRD@indianoil.in",
     subject: process.env.GMAIL_INVOICE_SUBJECT || "AC4 Inv.-",
     requireAttachment: process.env.GMAIL_INVOICE_REQUIRE_ATTACHMENT !== "false",
+  };
+}
+
+export function getGmailRspConfig(): GmailRspConfig {
+  return {
+    sender: process.env.GMAIL_RSP_SENDER || "IDPCS@indianoil.in",
+    subject: process.env.GMAIL_RSP_SUBJECT || "Price change",
+    requireAttachment: false,
+    customerCode: process.env.GMAIL_RSP_CUSTOMER_CODE || "330042",
   };
 }
 

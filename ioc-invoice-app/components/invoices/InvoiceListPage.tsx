@@ -37,7 +37,7 @@ export function InvoiceListPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
-          placeholder="Search by invoice number, supplier, or date (DD/MM/YYYY)..."
+          placeholder="Search by SAP invoice number, supplier, or date (DD/MM/YYYY)..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -115,7 +115,7 @@ export function InvoiceListPage() {
                 <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-ioc-border bg-ioc-section text-left">
-                      <th className="px-4 py-3 font-semibold text-ioc-navy">Invoice #</th>
+                      <th className="px-4 py-3 font-semibold text-ioc-navy">Invoice # (SAP)</th>
                       <th className="px-4 py-3 font-semibold text-ioc-navy">Date</th>
                       <th className="px-4 py-3 font-semibold text-ioc-navy">Supplier</th>
                       <th className="px-4 py-3 font-semibold text-ioc-navy">Total</th>

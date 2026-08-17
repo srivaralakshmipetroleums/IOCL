@@ -102,7 +102,7 @@ export class InvoiceRepository {
           .lte("invoice_date", monthRange.dateTo);
       } else {
         query = query.or(
-          `invoice_number.ilike.%${filters.search}%,supplier_name.ilike.%${filters.search}%`
+          `invoice_number.ilike.%${filters.search}%,sap_entry_number.ilike.%${filters.search}%,supplier_name.ilike.%${filters.search}%`
         );
       }
     }

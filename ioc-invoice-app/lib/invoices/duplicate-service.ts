@@ -9,7 +9,7 @@ export class DuplicateService {
       .from("invoices")
       .select("*")
       .eq("supplier_name", supplierName)
-      .eq("invoice_number", invoiceNumber)
+      .or(`invoice_number.eq.${invoiceNumber},sap_entry_number.eq.${invoiceNumber}`)
       .not("status", "in", '("DUPLICATE","SKIPPED")')
       .maybeSingle();
 

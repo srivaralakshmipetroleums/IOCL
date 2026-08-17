@@ -35,7 +35,13 @@ Return ONLY valid JSON matching this structure:
   ]
 }
 
-Extract all line items. Do not perform unit conversions.`;
+Extract all line items. Do not perform unit conversions.
+
+IOCL numbering (required):
+- invoice_number MUST be the 10-digit SAP Entry Number / billing document (e.g. 7009317047). This is what IOCL PAD statements call Invoice Number / Billing Doc.
+- Do NOT use the alphanumeric commercial document number (e.g. 20264438B025811) as invoice_number.
+- sap_entry_number MUST be the same 10-digit SAP Entry Number.
+`;
 
 export class ClaudeInvoiceExtractor implements InvoiceExtractor {
   private client: Anthropic;

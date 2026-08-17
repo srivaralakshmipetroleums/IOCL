@@ -129,18 +129,18 @@ export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> 
           <CardContent className="space-y-4">
             {editing ? (
               <>
-                <Field label="Invoice Number" value={formData.invoice_number || ""} onChange={(v) => setFormData({ ...formData, invoice_number: v })} />
+                <Field label="Invoice Number (SAP)" value={formData.invoice_number || ""} onChange={(v) => setFormData({ ...formData, invoice_number: v, sap_entry_number: v })} />
                 <Field label="Supplier" value={formData.supplier_name || ""} onChange={(v) => setFormData({ ...formData, supplier_name: v })} />
                 <Field label="Date" value={formData.invoice_date || ""} onChange={(v) => setFormData({ ...formData, invoice_date: v })} type="date" />
                 <Button onClick={handleSave}>Save Changes</Button>
               </>
             ) : (
               <dl className="grid grid-cols-2 gap-4 text-sm">
-                <Detail label="Invoice Number" value={invoice.invoice_number} />
+                <Detail label="Invoice Number (SAP)" value={invoice.invoice_number} />
                 <Detail label="Date" value={invoice.invoice_date ? formatDate(invoice.invoice_date) : "—"} />
                 <Detail label="Supplier" value={invoice.supplier_name} />
                 <Detail label="Total" value={invoice.invoice_total ? formatCurrency(invoice.invoice_total) : "—"} />
-                <Detail label="SAP Entry" value={invoice.sap_entry_number} />
+                <Detail label="SAP Entry" value={invoice.sap_entry_number || invoice.invoice_number} />
                 <Detail label="Delivery #" value={invoice.delivery_number} />
               </dl>
             )}

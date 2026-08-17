@@ -28,6 +28,21 @@ interface GmailStatus {
     subject: string;
     requireAttachment: boolean;
   };
+  rspConfig?: {
+    sender: string;
+    subject: string;
+    customerCode: string;
+  };
+}
+
+interface RspFetchResult {
+  jobId: string;
+  query: string;
+  emailsFound: number;
+  pricesUpserted: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
 }
 
 interface FetchResult {
@@ -137,6 +152,78 @@ interface GmailProcessResponse {
   errors: string[];
 }
 
+interface GmailRspProcessResponse {
+  pricesUpserted: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}
+
+async function fetchRspDateRangeChunk(
+  dateFrom: string,
+  dateTo: string,
+  onProgress?: (progress: FetchProgress) => void
+): Promise<RspFetchResult> {
+  const scan = await postGmailApi<GmailScanResponse>("/api/gmail/fetch-rsp/scan", {
+    dateFrom,
+    dateTo,
+  });
+
+  const result: RspFetchResult = {
+    jobId: scan.jobId,
+    query: scan.query,
+    emailsFound: scan.emailsFound,
+    pricesUpserted: 0,
+    skipped: scan.skippedAlready,
+    failed: 0,
+    errors: [],
+  };
+
+  const total = scan.pendingMessageIds.length;
+
+  if (total === 0) {
+    onProgress?.({
+      label: `${scan.emailsFound} emails already imported`,
+      emailCurrent: 0,
+      emailTotal: 0,
+    });
+  }
+
+  for (let i = 0; i < scan.pendingMessageIds.length; i++) {
+    const messageId = scan.pendingMessageIds[i];
+    onProgress?.({
+      label: `Processing ${i + 1} of ${total} new emails (${scan.skippedAlready} already imported)`,
+      emailCurrent: i + 1,
+      emailTotal: total,
+    });
+
+    try {
+      const partial = await postGmailApi<GmailRspProcessResponse>(
+        "/api/gmail/fetch-rsp/process",
+        { messageId }
+      );
+
+      result.pricesUpserted += partial.pricesUpserted;
+      result.skipped += partial.skipped;
+      result.failed += partial.failed;
+      result.errors.push(...partial.errors);
+    } catch (err) {
+      result.failed++;
+      result.errors.push(err instanceof Error ? err.message : "Processing failed");
+    }
+  }
+
+  await postGmailApi("/api/gmail/fetch-rsp/finalize", {
+    jobId: scan.jobId,
+    emailsFound: result.emailsFound,
+    pricesUpserted: result.pricesUpserted,
+    skipped: result.skipped,
+    failed: result.failed,
+  });
+
+  return result;
+}
+
 async function fetchDateRangeChunk(
   dateFrom: string,
   dateTo: string,
@@ -207,8 +294,12 @@ export function GmailPage() {
   const [fetching, setFetching] = useState(false);
   const [fetchProgress, setFetchProgress] = useState<FetchProgress | null>(null);
   const [result, setResult] = useState<FetchResult | null>(null);
+  const [rspResult, setRspResult] = useState<RspFetchResult | null>(null);
+  const [rspFetching, setRspFetching] = useState(false);
+  const [rspProgress, setRspProgress] = useState<FetchProgress | null>(null);
   const [bulkResult, setBulkResult] = useState<BulkFetchResult | null>(null);
   const [fetchError, setFetchError] = useState("");
+  const [rspError, setRspError] = useState("");
 
   const { data: status, refetch } = useQuery<GmailStatus>({
     queryKey: ["gmail-status"],
@@ -328,6 +419,56 @@ export function GmailPage() {
     }
   }
 
+  async function handleFetchRspDateRange() {
+    const validationError = validateDateRange();
+    if (validationError) {
+      setRspError(validationError);
+      return;
+    }
+
+    setRspFetching(true);
+    setRspError("");
+    setRspResult(null);
+
+    try {
+      const chunks = getMonthChunksInDateRange(dateFrom, dateTo);
+      let aggregated: RspFetchResult | null = null;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const chunkResult = await fetchRspDateRangeChunk(
+          chunk.dateFrom,
+          chunk.dateToInclusive,
+          (progress) => {
+            setRspProgress({
+              ...progress,
+              label: `${chunk.label} — ${progress.label}`,
+              chunkCurrent: chunks.length > 1 ? i + 1 : undefined,
+              chunkTotal: chunks.length > 1 ? chunks.length : undefined,
+            });
+          }
+        );
+
+        if (!aggregated) {
+          aggregated = { ...chunkResult };
+        } else {
+          aggregated.emailsFound += chunkResult.emailsFound;
+          aggregated.pricesUpserted += chunkResult.pricesUpserted;
+          aggregated.skipped += chunkResult.skipped;
+          aggregated.failed += chunkResult.failed;
+          aggregated.errors.push(...chunkResult.errors);
+        }
+      }
+
+      if (aggregated) setRspResult(aggregated);
+    } catch (err) {
+      setRspError(err instanceof Error ? err.message : "RSP fetch failed");
+    } finally {
+      setRspFetching(false);
+      setRspProgress(null);
+    }
+  }
+
   async function handleFetchDateRange() {
     const validationError = validateDateRange();
     if (validationError) {
@@ -354,6 +495,14 @@ export function GmailPage() {
         : 0;
 
   const canFetch = status?.connected && status.claudeConfigured && !fetching;
+  const canFetchRsp = status?.connected && !fetching && !rspFetching;
+  const rspProgressPercent = rspProgress?.emailCurrent && rspProgress.emailTotal
+    ? Math.round((rspProgress.emailCurrent / rspProgress.emailTotal) * 100)
+    : rspProgress?.chunkCurrent && rspProgress.chunkTotal
+      ? Math.round((rspProgress.chunkCurrent / rspProgress.chunkTotal) * 100)
+      : rspFetching
+        ? 10
+        : 0;
   const isSingleChunk =
     !bulkResult && dateFrom && dateTo
       ? getMonthChunksInDateRange(dateFrom, dateTo).length === 1
@@ -364,7 +513,7 @@ export function GmailPage() {
       <div>
         <PageTitle>Gmail Invoice Fetch</PageTitle>
         <p className="mt-2 text-sm text-ioc-muted">
-          Fetch IOC invoice PDFs from Gmail and run them through the extraction pipeline
+          Fetch IOC invoice PDFs and retail selling price (RSP) emails from Gmail
         </p>
       </div>
 
@@ -601,6 +750,71 @@ export function GmailPage() {
 
                 <Link href="/invoices">
                   <Button variant="outline" size="sm">View Invoices</Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {status?.connected && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Fetch Retail Selling Prices (RSP)</CardTitle>
+            <CardDescription>
+              Import IOCL price-change emails into retail selling prices for the Account dashboard.
+              No Claude required — parses plain-text email body. Re-runs skip already imported
+              emails without downloading them again.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {status.rspConfig && (
+              <div className="space-y-1 rounded-md bg-muted p-3 text-sm">
+                <p><strong>Sender:</strong> {status.rspConfig.sender}</p>
+                <p><strong>Subject contains:</strong> {status.rspConfig.subject}</p>
+                <p><strong>Customer code:</strong> {status.rspConfig.customerCode}</p>
+                <p><strong>Products:</strong> Petrol → MS, Diesel → HSD (XP skipped)</p>
+              </div>
+            )}
+
+            <p className="text-sm text-muted-foreground">
+              Uses the same date range as invoice fetch above ({dateFrom} to {dateTo}).
+            </p>
+
+            <Button onClick={handleFetchRspDateRange} disabled={!canFetchRsp}>
+              {rspFetching ? "Fetching RSP emails..." : "Fetch RSP Price Changes"}
+            </Button>
+
+            {rspFetching && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {rspProgress ? `${rspProgress.label}...` : "Searching Gmail..."}
+                </p>
+                <Progress value={rspProgressPercent} />
+              </div>
+            )}
+
+            {rspError && <p className="text-sm text-destructive">{rspError}</p>}
+
+            {rspResult && (
+              <div className="space-y-3 rounded-md border p-4 text-sm">
+                <p className="font-medium">
+                  {dateFrom} to {dateTo} — RSP import
+                </p>
+                <p>{rspResult.emailsFound} emails found</p>
+                <p>{rspResult.pricesUpserted} price rows upserted (MS + HSD)</p>
+                <p>{rspResult.skipped} skipped (already processed)</p>
+                <p className={rspResult.failed > 0 ? "text-destructive" : ""}>
+                  {rspResult.failed} errors
+                </p>
+                <p className="break-all text-xs text-muted-foreground">Query: {rspResult.query}</p>
+                {rspResult.errors.length > 0 && (
+                  <ul className="list-disc pl-4 text-destructive">
+                    {rspResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+                <Link href="/account">
+                  <Button variant="outline" size="sm">View Account Dashboard</Button>
                 </Link>
               </div>
             )}

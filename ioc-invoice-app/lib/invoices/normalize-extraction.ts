@@ -1,5 +1,6 @@
 import type { ExtractedInvoice } from "@/lib/extraction/types";
 import { convertLineItems } from "@/lib/invoices/quantity-converter";
+import { resolveIoclInvoiceNumber } from "@/lib/invoices/iocl-invoice-number";
 import type { InvoiceInsert, InvoiceLineItemInsert } from "@/types/database";
 
 export interface NormalizedInvoice {
@@ -14,12 +15,10 @@ export interface NormalizedInvoice {
 }
 
 export function normalizeDate(dateStr: string): string {
-  const parsed = new Date(dateStr);
-  if (!isNaN(parsed.getTime())) {
-    return parsed.toISOString().split("T")[0];
-  }
+  const trimmed = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
 
-  const match = dateStr.match(/(\d{1,2})[-/](\w{3})[-/](\d{2,4})/i);
+  const match = trimmed.match(/^(\d{1,2})[-/](\w{3})[-/](\d{2,4})$/i);
   if (match) {
     const months: Record<string, string> = {
       jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
@@ -32,7 +31,12 @@ export function normalizeDate(dateStr: string): string {
     return `${year}-${month}-${day}`;
   }
 
-  return dateStr;
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split("T")[0];
+  }
+
+  return trimmed;
 }
 
 export function normalizeExtraction(
@@ -40,9 +44,13 @@ export function normalizeExtraction(
   options: { pdfStoragePath?: string; status?: string; provider?: string } = {}
 ): NormalizedInvoice {
   const convertedItems = convertLineItems(extracted.line_items);
+  const invoiceNumber = resolveIoclInvoiceNumber(
+    extracted.invoice.invoice_number,
+    extracted.invoice.sap_entry_number
+  );
 
   const invoice: InvoiceInsert = {
-    invoice_number: extracted.invoice.invoice_number,
+    invoice_number: invoiceNumber,
     invoice_date: normalizeDate(extracted.invoice.invoice_date),
     supplier_name: extracted.invoice.supplier_name,
     supplier_code: extracted.invoice.supplier_code ?? null,
@@ -51,7 +59,7 @@ export function normalizeExtraction(
     delivery_number: extracted.invoice.delivery_number ?? null,
     sales_order_number: extracted.invoice.sales_order_number ?? null,
     po_reference: extracted.invoice.po_reference ?? null,
-    sap_entry_number: extracted.invoice.sap_entry_number ?? null,
+    sap_entry_number: invoiceNumber,
     transport_number: extracted.invoice.transport_number ?? null,
     invoice_total: extracted.invoice.invoice_total ?? null,
     rounding_difference: extracted.invoice.rounding_difference ?? null,

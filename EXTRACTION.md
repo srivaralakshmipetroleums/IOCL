@@ -83,6 +83,8 @@ interface InvoiceExtractor {
 - Report calculations
 - Security / authorization
 
+`invoice_number` is the 10-digit SAP entry / billing document (same as PAD billing doc). Do not use the alphanumeric commercial PDF number.
+
 ## Quantity Conversion (TypeScript)
 
 ```
