@@ -1,4 +1,5 @@
 import { chargeDisplayName, isChargeRow } from "@/lib/pad/fee-classify";
+import { isFleetCardPayment } from "@/lib/pad/categorize";
 import {
   fuelProductFromCategory,
   isFuelSupplyRow,
@@ -22,6 +23,8 @@ export interface PadExecutiveSummary {
   netMovement: number;
   openDeliveryValue: number | null;
   moneyInvested: number;
+  moneyInvestedSbi: number;
+  moneyInvestedFleet: number;
   fuelPurchaseValue: number;
   fuelQuantityKl: number;
   fuelMsKl: number;
@@ -238,6 +241,14 @@ export function computeExecutiveSummary(
 
   const pricedRows = profitRows.filter((row) => row.retailPricePerL != null);
 
+  const payments = transactions.filter((row) => row.category === "PAYMENT");
+  const moneyInvestedSbi = sum(payments, (row) =>
+    isFleetCardPayment(row.document_type, row.item_text) ? 0 : row.credit
+  );
+  const moneyInvestedFleet = sum(payments, (row) =>
+    isFleetCardPayment(row.document_type, row.item_text) ? row.credit : 0
+  );
+
   return {
     openingBalance: resolveOpeningBalance(statements, transactions, dateFrom),
     closingBalance: resolveClosingBalance(statements, transactions, dateTo),
@@ -245,7 +256,9 @@ export function computeExecutiveSummary(
     totalDebits,
     netMovement: totalCredits - totalDebits,
     openDeliveryValue: resolveOpenDeliveryValue(statements),
-    moneyInvested: sum(transactions, (row) => (row.category === "PAYMENT" ? row.credit : 0)),
+    moneyInvested: moneyInvestedSbi + moneyInvestedFleet,
+    moneyInvestedSbi,
+    moneyInvestedFleet,
     fuelPurchaseValue: sum(supplyRows, (row) => row.debit - row.credit),
     fuelQuantityKl: fuelMsKl + fuelHsdKl,
     fuelMsKl,

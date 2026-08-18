@@ -3,9 +3,10 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  CreditCard,
   Droplets,
   IndianRupee,
-  PiggyBank,
+  Landmark,
   Scale,
   TrendingUp,
   Wallet,
@@ -91,20 +92,22 @@ export function PadKpiCards({ summary, isLoading }: PadKpiCardsProps) {
           icon={TrendingUp}
           iconBg="bg-ioc-processing-light text-ioc-mid-blue"
         />
-        <KpiCard
-          label="Open Delivery Value"
-          value={s.openDeliveryValue != null ? formatCrores(s.openDeliveryValue) : "—"}
-          icon={IndianRupee}
-          iconBg="bg-ioc-warning-light text-ioc-warning"
-        />
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
-          label="Money Invested"
-          value={formatCrores(s.moneyInvested)}
-          icon={PiggyBank}
+          label="SBI Deposits"
+          value={formatCrores(s.moneyInvestedSbi)}
+          icon={Landmark}
           iconBg="bg-ioc-processing-light text-ioc-blue"
+          sub="Bank transfers to IOCL (SBIN…)"
+        />
+        <KpiCard
+          label="Fleet Card"
+          value={formatCrores(s.moneyInvestedFleet)}
+          icon={CreditCard}
+          iconBg="bg-ioc-processing-light text-ioc-mid-blue"
+          sub="Fleet-card postings"
         />
         <KpiCard
           label="Fuel Purchased"
@@ -120,14 +123,14 @@ export function PadKpiCards({ summary, isLoading }: PadKpiCardsProps) {
           iconBg="bg-ioc-success-light text-ioc-success"
         />
         <KpiCard
-          label="Net Profit"
+          label="Gross Profit"
           value={formatCrores(s.grossPumpProfit)}
           icon={TrendingUp}
           iconBg="bg-ioc-success-light text-ioc-success"
           sub="Fuel margin + dealer margin + discounts − charges"
         />
         <KpiCard
-          label="IOCL Margin"
+          label="YVR464-dealer margin"
           value={formatCrores(s.marginTotal)}
           icon={ArrowDownLeft}
           iconBg="bg-ioc-processing-light text-ioc-mid-blue"

@@ -28,6 +28,13 @@ describe("pad parser", () => {
     ).toBe("PAYMENT");
     expect(
       categorizePadTransaction(
+        "Fleet- Card Posting",
+        "4000523459-0000006 20250417012595",
+        null
+      )
+    ).toBe("PAYMENT");
+    expect(
+      categorizePadTransaction(
         "Billing doc.transfer",
         "YVR464-4404-DEALER MARGIN FOR MAY",
         null

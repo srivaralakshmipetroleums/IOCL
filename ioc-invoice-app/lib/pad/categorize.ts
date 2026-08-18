@@ -13,6 +13,12 @@ export const PAD_TRANSACTION_CATEGORIES = [
 
 export type PadTransactionCategory = (typeof PAD_TRANSACTION_CATEGORIES)[number];
 
+export function isFleetCardPayment(documentType: string | null | undefined, itemText: string): boolean {
+  const type = (documentType || "").trim();
+  const text = itemText.toUpperCase();
+  return type === "Fleet- Card Posting" || (text.includes("FLEET") && text.includes("CARD"));
+}
+
 export function categorizePadTransaction(
   documentType: string | null | undefined,
   itemText: string,
@@ -34,7 +40,14 @@ export function categorizePadTransaction(
     return "OTHER";
   }
 
-  if (type === "Customer ECollection" || type === "Customer payment") return "PAYMENT";
+  if (
+    type === "Customer ECollection" ||
+    type === "Customer payment" ||
+    type === "Fleet- Card Posting" ||
+    (text.includes("FLEET") && text.includes("CARD"))
+  ) {
+    return "PAYMENT";
+  }
   if (type === "Cust IntrestManually") return "INTEREST";
   if (type === "Customer credit memo") return "CREDIT_MEMO";
   if (type === "Customer debit memo") return "FEE";

@@ -89,10 +89,32 @@ describe("pad metrics", () => {
     ]);
 
     expect(summary.moneyInvested).toBe(600000);
+    expect(summary.moneyInvestedSbi).toBe(600000);
+    expect(summary.moneyInvestedFleet).toBe(0);
     expect(summary.fuelPurchaseValue).toBe(500000);
     expect(summary.retailRevenue).toBe(550000);
     expect(summary.grossPumpProfit).toBe(50000);
     expect(summary.marginTotal).toBe(10000);
+  });
+
+  it("splits money invested into SBI vs fleet card", () => {
+    const transactions: PadTransactionRow[] = [
+      {
+        ...fuelRow({ id: "p1", category: "PAYMENT", credit: 400000, debit: 0 }),
+        item_text: "SBIN0002766_UTR",
+        document_type: "Customer ECollection",
+      },
+      {
+        ...fuelRow({ id: "p2", category: "PAYMENT", credit: 150000, debit: 0 }),
+        item_text: "4000523459-0000006 20250417012595",
+        document_type: "Fleet- Card Posting",
+      },
+    ];
+
+    const summary = computeExecutiveSummary(transactions, [], []);
+    expect(summary.moneyInvestedSbi).toBe(400000);
+    expect(summary.moneyInvestedFleet).toBe(150000);
+    expect(summary.moneyInvested).toBe(550000);
   });
 
   it("classifies fee subtypes", () => {

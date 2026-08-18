@@ -179,7 +179,10 @@ export function PadCharts({
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="ioc-card p-5">
-          <h3 className="mb-4 text-sm font-semibold text-ioc-navy">PAD Balance Over Time</h3>
+          <h3 className="mb-1 text-sm font-semibold text-ioc-navy">PAD Balance Over Time</h3>
+          <p className="mb-4 text-xs text-ioc-muted">
+            Positive = amount payable to IOCL. Negative = extra paid / advance with IOCL.
+          </p>
           <div className="h-64">
             {balanceData.length ? (
               <ResponsiveContainer width="100%" height="100%">
