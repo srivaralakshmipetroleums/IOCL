@@ -52,6 +52,11 @@ export async function loadPadDashboardData(
     const hsd = (row.hsdRetailPerL ?? 0) * row.hsdKl * 1000;
     return sum + ms + hsd;
   }, 0);
+  const invoiceMsKl = rateTrend.reduce((sum, row) => sum + row.msKl, 0);
+  const invoiceHsdKl = rateTrend.reduce((sum, row) => sum + row.hsdKl, 0);
+  summary.fuelMsKl = invoiceMsKl;
+  summary.fuelHsdKl = invoiceHsdKl;
+  summary.fuelQuantityKl = invoiceMsKl + invoiceHsdKl;
 
   return {
     transactions,

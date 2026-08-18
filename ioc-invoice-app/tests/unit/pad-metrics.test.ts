@@ -156,6 +156,9 @@ describe("pad metrics", () => {
     expect(report.byType.map((r) => r.name)).toEqual(["Licence fee", "C4 E-lock recovery"]);
     expect(report.byMonth).toHaveLength(1);
     expect(report.items).toHaveLength(2);
+
+    const summary = computeExecutiveSummary([license, elock, supply], [], []);
+    expect(summary.feesTotal).toBeCloseTo(32507.91);
   });
 
   it("aggregates gross profit by month", () => {

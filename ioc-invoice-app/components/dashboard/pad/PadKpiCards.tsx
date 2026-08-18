@@ -7,6 +7,7 @@ import {
   Droplets,
   IndianRupee,
   Landmark,
+  Receipt,
   Scale,
   TrendingUp,
   Wallet,
@@ -145,6 +146,13 @@ export function PadKpiCards({ summary, isLoading }: PadKpiCardsProps) {
               ? `${s.missingRetailPriceCount} fuel rows missing retail price`
               : undefined
           }
+        />
+        <KpiCard
+          label="Charges"
+          value={formatCrores(s.feesTotal)}
+          icon={Receipt}
+          iconBg="bg-ioc-orange-light text-ioc-orange"
+          sub="Licence, rental, interest, penalties, etc."
         />
       </div>
     </>

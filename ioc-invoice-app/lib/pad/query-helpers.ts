@@ -114,20 +114,75 @@ export async function getPadStatements(
   }));
 }
 
-export async function getRetailPrices(supabase: SupabaseClient) {
-  const { data, error } = await supabase
-    .from("retail_selling_prices")
-    .select("id, product, effective_from, price_per_litre, notes")
-    .order("product")
-    .order("effective_from", { ascending: true });
+export async function getRetailPrices(
+  supabase: SupabaseClient,
+  filters?: Pick<DashboardFilters, "dateFrom" | "dateTo" | "months">
+) {
+  const pageSize = 1000;
+  const allData: Array<{
+    id: string;
+    product: string;
+    effective_from: string;
+    price_per_litre: number;
+    notes: string | null;
+  }> = [];
 
-  if (error) throw error;
+  for (const product of ["MS", "HSD"] as const) {
+    let from = 0;
 
-  return (data ?? []).map((row) => ({
-    id: String(row.id),
+    while (true) {
+      let query = supabase
+        .from("retail_selling_prices")
+        .select("id, product, effective_from, price_per_litre, notes")
+        .eq("product", product)
+        .order("effective_from", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (filters?.dateFrom) {
+        query = query.gte("effective_from", filters.dateFrom);
+      }
+      if (filters?.dateTo) {
+        query = query.lte("effective_from", filters.dateTo);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const batch = data ?? [];
+      allData.push(
+        ...batch.map((row) => ({
+          id: String(row.id),
+          product: String(row.product),
+          effective_from: String(row.effective_from),
+          price_per_litre: Number(row.price_per_litre),
+          notes: (row.notes as string) ?? null,
+        }))
+      );
+
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+  }
+
+  let rows = allData.map((row) => ({
+    id: row.id,
     product: row.product as "MS" | "HSD",
-    effective_from: String(row.effective_from),
-    price_per_litre: Number(row.price_per_litre),
-    notes: (row.notes as string) ?? null,
+    effective_from: row.effective_from.slice(0, 10),
+    price_per_litre: row.price_per_litre,
+    notes: row.notes,
   }));
+
+  if (filters?.months?.length) {
+    const allowed = new Set(filters.months);
+    rows = rows.filter((row) => {
+      const key = monthKey(row.effective_from);
+      return key ? allowed.has(key) : false;
+    });
+  }
+
+  return rows.sort((a, b) =>
+    a.product === b.product
+      ? a.effective_from.localeCompare(b.effective_from)
+      : a.product.localeCompare(b.product)
+  );
 }

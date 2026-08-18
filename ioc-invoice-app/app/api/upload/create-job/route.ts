@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
   const period = body.period
     ? { dateFrom: body.period.dateFrom, dateTo: body.period.dateTo, label: body.period.label }
     : undefined;
-
   const jobId = await processingService.createJob(user.id, totalFiles, period);
   return NextResponse.json({ jobId });
 }

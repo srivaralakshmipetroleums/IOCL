@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PadReconciliationRow } from "@/lib/pad/reconciliation";
 import { formatCurrencyINR } from "@/lib/dashboard/format";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -11,6 +13,19 @@ const STATUS_STYLES: Record<string, string> = {
   INVOICE_ONLY: "bg-blue-100 text-blue-800",
   AMOUNT_MISMATCH: "bg-red-100 text-red-700",
 };
+
+function reconcileMonthKey(row: PadReconciliationRow): string | null {
+  const date = row.padDate || row.invoiceDate;
+  return date ? date.slice(0, 7) : null;
+}
+
+function formatMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 interface PadReconciliationTableProps {
   rows: PadReconciliationRow[];
@@ -30,11 +45,33 @@ export function PadReconciliationTable({
   isLoading,
 }: PadReconciliationTableProps) {
   const [statusFilter, setStatusFilter] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
 
   const filtered = useMemo(() => {
     if (!statusFilter) return rows;
     return rows.filter((r) => r.status === statusFilter);
   }, [rows, statusFilter]);
+
+  const monthsInView = useMemo(() => {
+    const keys = new Set<string>();
+    for (const row of filtered) {
+      const key = reconcileMonthKey(row);
+      if (key) keys.add(key);
+    }
+    return [...keys].sort();
+  }, [filtered]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [monthsInView, statusFilter]);
+
+  const safePageIndex = monthsInView.length ? Math.min(pageIndex, monthsInView.length - 1) : 0;
+  const activeMonth = monthsInView[safePageIndex] ?? null;
+
+  const pageRows = useMemo(() => {
+    if (!activeMonth) return filtered;
+    return filtered.filter((row) => reconcileMonthKey(row) === activeMonth);
+  }, [filtered, activeMonth]);
 
   if (isLoading) {
     return <div className="ioc-card p-6 text-sm text-ioc-muted">Loading reconciliation...</div>;
@@ -66,6 +103,35 @@ export function PadReconciliationTable({
         </select>
       </div>
 
+      {monthsInView.length > 1 && (
+        <div className="flex items-center justify-between border-b border-ioc-border bg-ioc-surface/50 px-4 py-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+            disabled={safePageIndex === 0}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
+          <span className="text-sm font-medium text-ioc-navy">
+            {activeMonth ? formatMonthLabel(activeMonth) : "—"} — Page {safePageIndex + 1} of{" "}
+            {monthsInView.length}
+            {" · "}
+            {pageRows.length} row{pageRows.length === 1 ? "" : "s"}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageIndex((p) => Math.min(monthsInView.length - 1, p + 1))}
+            disabled={safePageIndex >= monthsInView.length - 1}
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
@@ -82,14 +148,14 @@ export function PadReconciliationTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {pageRows.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-4 py-8 text-center text-ioc-muted">
                   No reconciliation rows.
                 </td>
               </tr>
             ) : (
-              filtered.map((row, i) => (
+              pageRows.map((row, i) => (
                 <tr
                   key={`${row.padTransactionId}-${row.invoiceId}-${i}`}
                   className="border-b border-ioc-border/60"

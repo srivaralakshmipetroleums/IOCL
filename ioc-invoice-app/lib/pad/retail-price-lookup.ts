@@ -1,10 +1,18 @@
 import type { RetailPriceRow, RetailProduct } from "@/lib/pad/types";
 
+function normalizeRetailDate(value: string): string {
+  return value.slice(0, 10);
+}
+
 export function buildRetailPriceLookup(prices: RetailPriceRow[]) {
   const byProduct: Record<RetailProduct, RetailPriceRow[]> = { MS: [], HSD: [] };
 
   for (const row of prices) {
-    byProduct[row.product].push(row);
+    if (row.product !== "MS" && row.product !== "HSD") continue;
+    byProduct[row.product].push({
+      ...row,
+      effective_from: normalizeRetailDate(row.effective_from),
+    });
   }
 
   for (const product of ["MS", "HSD"] as const) {
@@ -13,9 +21,10 @@ export function buildRetailPriceLookup(prices: RetailPriceRow[]) {
 
   return function lookup(product: RetailProduct, date: string): number | null {
     const list = byProduct[product];
+    const target = normalizeRetailDate(date);
     let match: RetailPriceRow | null = null;
     for (const row of list) {
-      if (row.effective_from <= date) {
+      if (row.effective_from <= target) {
         match = row;
       } else {
         break;

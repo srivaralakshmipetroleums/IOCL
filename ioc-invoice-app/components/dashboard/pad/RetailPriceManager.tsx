@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
+import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
+import { buildDashboardQueryString } from "@/lib/dashboard/filters";
 import { fetchDashboardJson } from "@/lib/dashboard/fetch";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +18,8 @@ interface RetailPrice {
 
 export function RetailPriceManager() {
   const queryClient = useQueryClient();
+  const { period } = useDashboardPeriod()!;
+  const periodQs = buildDashboardQueryString(period);
   const fileRef = useRef<HTMLInputElement>(null);
   const [product, setProduct] = useState<"MS" | "HSD">("MS");
   const [effectiveFrom, setEffectiveFrom] = useState("");
@@ -23,8 +27,8 @@ export function RetailPriceManager() {
   const [message, setMessage] = useState<string | null>(null);
 
   const { data: prices = [], isLoading } = useQuery<RetailPrice[]>({
-    queryKey: ["retail-prices"],
-    queryFn: () => fetchDashboardJson("/api/retail-prices"),
+    queryKey: ["retail-prices", period.dateFrom, period.dateTo, period.months?.join(",") ?? ""],
+    queryFn: () => fetchDashboardJson(`/api/retail-prices?${periodQs}`),
   });
 
   const addMutation = useMutation({
@@ -88,7 +92,8 @@ export function RetailPriceManager() {
         <div>
           <h3 className="text-sm font-semibold text-ioc-navy">Retail Selling Prices</h3>
           <p className="text-xs text-ioc-muted">
-            Price-change dates for MS and HSD (₹/litre). Used for gross pump profit.
+            Price-change dates for MS and HSD (₹/litre). Showing {period.label}. Used for gross
+            pump profit.
           </p>
         </div>
         <div className="flex gap-2">
@@ -170,7 +175,7 @@ export function RetailPriceManager() {
             ) : prices.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-4 text-ioc-muted">
-                  No retail prices yet. Import CSV or add manually.
+                  No retail prices for {period.label}. Import CSV or add manually.
                 </td>
               </tr>
             ) : (

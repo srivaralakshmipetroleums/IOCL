@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { getDashboardFilters } from "@/lib/dashboard/filters";
 import { getRetailPrices } from "@/lib/pad/query-helpers";
 import { upsertRetailPrices } from "@/lib/pad/retail-price-repository";
 import { createServiceClient } from "@/lib/supabase/server";
@@ -12,12 +13,13 @@ const bodySchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { user, response } = await requireAuth();
   if (!user) return response!;
 
+  const filters = getDashboardFilters(request.nextUrl.searchParams);
   const supabase = await createServiceClient();
-  const prices = await getRetailPrices(supabase);
+  const prices = await getRetailPrices(supabase, filters);
   return NextResponse.json(prices);
 }
 
