@@ -88,16 +88,16 @@ export function addPadSheet(
   sheet.mergeCells(1, 1, 1, lastCol);
   const titleCell = sheet.getCell(1, 1);
   titleCell.value = title;
-  titleCell.font = { bold: true, size: 13, color: { argb: PAD_REPORT_COLORS.white }, name: "Calibri" };
+  titleCell.font = { bold: true, size: 16, color: { argb: PAD_REPORT_COLORS.white }, name: "Calibri" };
   applyFill(titleCell, PAD_REPORT_COLORS.titleBg);
   titleCell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-  sheet.getRow(1).height = 28;
+  sheet.getRow(1).height = 32;
 
   const headerRow = sheet.addRow(headers);
-  headerRow.height = 22;
+  headerRow.height = 30;
   for (let column = 1; column <= lastCol; column++) {
     const cell = headerRow.getCell(column);
-    cell.font = { bold: true, size: 10, color: { argb: PAD_REPORT_COLORS.white }, name: "Calibri" };
+    cell.font = { bold: true, size: 12, color: { argb: PAD_REPORT_COLORS.white }, name: "Calibri" };
     applyFill(cell, PAD_REPORT_COLORS.headerBg);
     cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     cell.border = thinBorder;
@@ -120,12 +120,13 @@ export function addPadDataRow(
   rowFill?: string
 ) {
   const row = sheet.addRow(values.map((value) => sanitizeCellValue(value)));
+  row.height = 24;
   const fill = rowFill ?? (dataIndex % 2 === 1 ? PAD_REPORT_COLORS.altRowBg : undefined);
 
   values.forEach((_, index) => {
     const cell = row.getCell(index + 1);
     const kind = kinds[index] ?? "text";
-    cell.font = { size: 9, name: "Calibri" };
+    cell.font = { size: 11, name: "Calibri" };
     if (fill) applyFill(cell, fill);
     cell.alignment = {
       horizontal: horizontalAlign(kind),
@@ -146,10 +147,11 @@ export function addPadTotalRow(
   kinds: PadColumnKind[]
 ) {
   const row = sheet.addRow(labels.map((value) => sanitizeCellValue(value)));
+  row.height = 24;
   labels.forEach((_, index) => {
     const cell = row.getCell(index + 1);
     const kind = kinds[index] ?? "text";
-    cell.font = { bold: true, size: 10, color: { argb: PAD_REPORT_COLORS.white }, name: "Calibri" };
+    cell.font = { bold: true, size: 11, color: { argb: PAD_REPORT_COLORS.white }, name: "Calibri" };
     applyFill(cell, PAD_REPORT_COLORS.totalBg);
     cell.alignment = { horizontal: horizontalAlign(kind), vertical: "middle" };
     cell.border = thinBorder;

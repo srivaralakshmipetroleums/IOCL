@@ -41,19 +41,19 @@ function applyFill(cell: ExcelJS.Cell, color: string) {
 export function styleTitleRow(sheet: ExcelJS.Worksheet) {
   sheet.mergeCells("A1:H1");
   const cell = sheet.getCell("A1");
-  cell.font = { bold: true, size: 13, color: { argb: REPORT_COLORS.white }, name: "Calibri" };
+  cell.font = { bold: true, size: 16, color: { argb: REPORT_COLORS.white }, name: "Calibri" };
   applyFill(cell, REPORT_COLORS.titleBg);
   cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-  sheet.getRow(1).height = 28;
+  sheet.getRow(1).height = 32;
 }
 
 export function styleHeaderRow(sheet: ExcelJS.Worksheet, rowNum: number) {
   const row = sheet.getRow(rowNum);
-  row.height = 22;
+  row.height = 30;
 
   for (let column = 1; column <= COLUMN_COUNT; column++) {
     const cell = row.getCell(column);
-    cell.font = { bold: true, size: 11, color: { argb: REPORT_COLORS.white }, name: "Calibri" };
+    cell.font = { bold: true, size: 12, color: { argb: REPORT_COLORS.white }, name: "Calibri" };
     applyFill(cell, REPORT_COLORS.headerBg);
     cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     cell.border = thinBorder;
@@ -63,12 +63,13 @@ export function styleHeaderRow(sheet: ExcelJS.Worksheet, rowNum: number) {
 export function styleDataRow(sheet: ExcelJS.Worksheet, rowNum: number, dataIndex: number) {
   const isAlt = dataIndex % 2 === 1;
   const row = sheet.getRow(rowNum);
+  row.height = 24;
 
   for (let column = 1; column <= COLUMN_COUNT; column++) {
     const cell = row.getCell(column);
     const columnStyle = DATA_COLUMN_STYLES[column - 1];
 
-    cell.font = { size: 10, name: "Calibri" };
+    cell.font = { size: 11, name: "Calibri" };
     if (isAlt) applyFill(cell, REPORT_COLORS.altRowBg);
     cell.alignment = {
       horizontal: columnStyle.horizontal,
@@ -87,6 +88,7 @@ export function addStyledTotalRow(
 ): number {
   const totalRowNum = dataEndRow >= dataStartRow ? dataEndRow + 1 : DATA_START_ROW;
   const row = sheet.getRow(totalRowNum);
+  row.height = 24;
   row.getCell(1).value = "TOTAL";
 
   const valueCell = row.getCell(5);
