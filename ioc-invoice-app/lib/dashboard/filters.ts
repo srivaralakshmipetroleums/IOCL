@@ -91,3 +91,21 @@ export function listMonthsInPeriod(
 
   return months;
 }
+
+/** Fill missing YYYY-MM rows so charts span the full selected period. */
+export function fillMonthsInPeriod<T extends { month: string }>(
+  rows: T[],
+  dateFrom: string | undefined,
+  dateTo: string | undefined,
+  allowedMonths: string[] | undefined,
+  empty: (month: string) => T
+): T[] {
+  if (!dateFrom || !dateTo) {
+    return [...rows].sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  const byMonth = new Map(rows.map((row) => [row.month, row]));
+  return listMonthsInPeriod(dateFrom, dateTo, allowedMonths).map(
+    (month) => byMonth.get(month) ?? empty(month)
+  );
+}

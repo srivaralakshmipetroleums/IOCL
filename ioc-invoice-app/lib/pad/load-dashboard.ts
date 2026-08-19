@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DashboardFilters } from "@/lib/dashboard/filters";
+import { fillMonthsInPeriod, type DashboardFilters } from "@/lib/dashboard/filters";
 import {
   computeBalanceTrend,
   computeCashFlowByMonth,
@@ -9,6 +9,11 @@ import {
   computeExecutiveSummary,
   computeFuelProfitByMonth,
   computeFuelProfitRows,
+  type PadCashFlowMonth,
+  type PadCommissionMonth,
+  type PadFuelPurchaseMonth,
+  type PadGrossProfitMonth,
+  type PadRateTrendPoint,
 } from "@/lib/pad/metrics";
 import { computeInvoiceMsHsdRateTrend, invoiceRateTrendToFuelPurchases, computeInvoiceGrossProfitByMonth } from "@/lib/pad/invoice-rate-trend";
 import {
@@ -17,6 +22,55 @@ import {
   getRetailPrices,
 } from "@/lib/pad/query-helpers";
 import { getFilteredInvoices, getFilteredLineItems } from "@/lib/dashboard/query-helpers";
+
+function emptyCashFlow(month: string): PadCashFlowMonth {
+  return {
+    month,
+    creditsIn: 0,
+    debitsOut: 0,
+    payments: 0,
+    margin: 0,
+    discounts: 0,
+    fuelDebits: 0,
+    charges: 0,
+  };
+}
+
+function emptyCommission(month: string): PadCommissionMonth {
+  return { month, margin: 0, discount: 0 };
+}
+
+function emptyFuel(month: string): PadFuelPurchaseMonth {
+  return { month, msKl: 0, hsdKl: 0, msValue: 0, hsdValue: 0 };
+}
+
+function emptyGrossProfit(month: string): PadGrossProfitMonth {
+  return {
+    month,
+    msProfit: 0,
+    hsdProfit: 0,
+    dealerMargin: 0,
+    discount: 0,
+    charges: 0,
+    fuelProfit: 0,
+    netProfit: 0,
+  };
+}
+
+function emptyRateTrend(month: string): PadRateTrendPoint {
+  return {
+    month,
+    msPurchasePerL: null,
+    hsdPurchasePerL: null,
+    msRetailPerL: null,
+    hsdRetailPerL: null,
+    msSpreadPerL: null,
+    hsdSpreadPerL: null,
+    msKl: 0,
+    hsdKl: 0,
+    totalKl: 0,
+  };
+}
 
 export async function loadPadDashboardData(
   supabase: SupabaseClient,
@@ -37,8 +91,20 @@ export async function loadPadDashboardData(
   );
 
   const profitRows = computeFuelProfitRows(transactions, retailPrices);
-  const rateTrend = computeInvoiceMsHsdRateTrend(invoices, lineItems, retailPrices);
-  const grossProfitByMonth = computeInvoiceGrossProfitByMonth(rateTrend, transactions);
+  const rateTrend = fillMonthsInPeriod(
+    computeInvoiceMsHsdRateTrend(invoices, lineItems, retailPrices),
+    filters.dateFrom,
+    filters.dateTo,
+    filters.months,
+    emptyRateTrend
+  );
+  const grossProfitByMonth = fillMonthsInPeriod(
+    computeInvoiceGrossProfitByMonth(rateTrend, transactions),
+    filters.dateFrom,
+    filters.dateTo,
+    filters.months,
+    emptyGrossProfit
+  );
   const summary = computeExecutiveSummary(
     transactions,
     statements,
@@ -65,9 +131,27 @@ export async function loadPadDashboardData(
     profitRows,
     summary,
     balanceTrend: computeBalanceTrend(transactions),
-    cashFlow: computeCashFlowByMonth(transactions),
-    fuelPurchases: invoiceRateTrendToFuelPurchases(rateTrend),
-    commissions: computeCommissionsByMonth(transactions),
+    cashFlow: fillMonthsInPeriod(
+      computeCashFlowByMonth(transactions),
+      filters.dateFrom,
+      filters.dateTo,
+      filters.months,
+      emptyCashFlow
+    ),
+    fuelPurchases: fillMonthsInPeriod(
+      invoiceRateTrendToFuelPurchases(rateTrend),
+      filters.dateFrom,
+      filters.dateTo,
+      filters.months,
+      emptyFuel
+    ),
+    commissions: fillMonthsInPeriod(
+      computeCommissionsByMonth(transactions),
+      filters.dateFrom,
+      filters.dateTo,
+      filters.months,
+      emptyCommission
+    ),
     commissionYtd: computeCommissionYtd(transactions),
     charges: computeChargeReport(transactions),
     fuelProfitByMonth: computeFuelProfitByMonth(profitRows),

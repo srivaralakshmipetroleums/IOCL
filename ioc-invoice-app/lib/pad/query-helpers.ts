@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DashboardFilters } from "@/lib/dashboard/filters";
 import type { PadStatementRow, PadTransactionRow } from "@/lib/pad/types";
+import { fetchAllPages } from "@/lib/supabase/fetch-all";
 
 function toNumber(value: unknown): number {
   const n = Number(value);
@@ -52,24 +53,28 @@ export async function getPadTransactions(
   supabase: SupabaseClient,
   filters: DashboardFilters
 ): Promise<PadTransactionRow[]> {
-  let query = supabase
-    .from("pad_transactions")
-    .select("*")
-    .neq("category", "SUMMARY")
-    .order("transaction_date", { ascending: true })
-    .order("line_number", { ascending: true });
+  const data = await fetchAllPages(async (from, to) => {
+    let query = supabase
+      .from("pad_transactions")
+      .select("*")
+      .neq("category", "SUMMARY")
+      .order("transaction_date", { ascending: true })
+      .order("line_number", { ascending: true })
+      .range(from, to);
 
-  if (filters.dateFrom) {
-    query = query.gte("transaction_date", filters.dateFrom);
-  }
-  if (filters.dateTo) {
-    query = query.lte("transaction_date", filters.dateTo);
-  }
+    if (filters.dateFrom) {
+      query = query.gte("transaction_date", filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      query = query.lte("transaction_date", filters.dateTo);
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
+    const { data, error } = await query;
+    if (error) throw error;
+    return data ?? [];
+  });
 
-  let rows = (data ?? []).map(mapTransaction);
+  let rows = data.map(mapTransaction);
 
   if (filters.months?.length) {
     const allowed = new Set(filters.months);

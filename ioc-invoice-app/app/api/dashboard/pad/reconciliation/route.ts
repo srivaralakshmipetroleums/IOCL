@@ -4,6 +4,7 @@ import { getDashboardFilters } from "@/lib/dashboard/filters";
 import { isFuelSupplyRow, getPadTransactions } from "@/lib/pad/query-helpers";
 import { reconcilePadWithInvoices } from "@/lib/pad/reconciliation";
 import { createServiceClient } from "@/lib/supabase/server";
+import { fetchAllPages, fetchByIdsInChunks } from "@/lib/supabase/fetch-all";
 
 export async function GET(request: NextRequest) {
   const { user, response } = await requireAuth();
@@ -12,27 +13,40 @@ export async function GET(request: NextRequest) {
   const filters = getDashboardFilters(request.nextUrl.searchParams);
   const supabase = await createServiceClient();
 
-  const [padTransactions, invoicesResult] = await Promise.all([
+  const [padTransactions, invoices] = await Promise.all([
     getPadTransactions(supabase, filters),
-    supabase
-      .from("invoices")
-      .select("id, invoice_number, sap_entry_number, invoice_date, invoice_total")
-      .gte("invoice_date", filters.dateFrom ?? "1900-01-01")
-      .lte("invoice_date", filters.dateTo ?? "2099-12-31"),
+    fetchAllPages(async (from, to) => {
+      let query = supabase
+        .from("invoices")
+        .select("id, invoice_number, sap_entry_number, invoice_date, invoice_total")
+        .order("invoice_date")
+        .order("id")
+        .range(from, to);
+
+      if (filters.dateFrom) query = query.gte("invoice_date", filters.dateFrom);
+      if (filters.dateTo) query = query.lte("invoice_date", filters.dateTo);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data ?? [];
+    }),
   ]);
 
-  if (invoicesResult.error) throw invoicesResult.error;
-
-  const invoices = invoicesResult.data ?? [];
   const invoiceIds = invoices.map((inv) => inv.id);
 
   const qtyByInvoice = new Map<string, number>();
   if (invoiceIds.length) {
-    const { data: lineItems, error: lineError } = await supabase
-      .from("invoice_line_items")
-      .select("invoice_id, output_quantity")
-      .in("invoice_id", invoiceIds);
-    if (lineError) throw lineError;
+    const lineItems = await fetchByIdsInChunks(invoiceIds, (chunk) =>
+      fetchAllPages(async (from, to) => {
+        const { data, error } = await supabase
+          .from("invoice_line_items")
+          .select("invoice_id, output_quantity")
+          .in("invoice_id", chunk)
+          .range(from, to);
+        if (error) throw error;
+        return data ?? [];
+      })
+    );
 
     for (const item of lineItems ?? []) {
       const litres = Number(item.output_quantity) || 0;

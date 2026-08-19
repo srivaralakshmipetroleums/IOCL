@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getMonthRange, listMonthsInPeriod } from "@/lib/dashboard/filters";
+import { getMonthRange, listMonthsInPeriod, fillMonthsInPeriod } from "@/lib/dashboard/filters";
 import {
   getCurrentMonthPeriod,
   getFinancialYearPeriod,
@@ -22,6 +22,19 @@ describe("dashboard filters", () => {
     expect(months).toHaveLength(12);
     expect(months[0]).toBe("2025-04");
     expect(months[11]).toBe("2026-03");
+  });
+
+  it("fillMonthsInPeriod keeps the selected range including empty months", () => {
+    const filled = fillMonthsInPeriod(
+      [{ month: "2022-12", value: 10 }],
+      "2022-11-01",
+      "2023-01-31",
+      undefined,
+      (month) => ({ month, value: 0 })
+    );
+    expect(filled.map((row) => row.month)).toEqual(["2022-11", "2022-12", "2023-01"]);
+    expect(filled[1].value).toBe(10);
+    expect(filled[0].value).toBe(0);
   });
 });
 
