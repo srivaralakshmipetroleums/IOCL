@@ -26,7 +26,7 @@ export function buildPadReportTitle(periodLabel: string, dateFrom: string, dateT
 
 export const PAD_SHEET_NAMES = [
   "Summary",
-  "Month P&L",
+  "Month PnL",
   "Fuel Purchases",
   "PAD Ledger",
   "Charges",

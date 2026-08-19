@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileSpreadsheet, FileText } from "lucide-react";
+import { triggerBrowserDownload } from "@/lib/download-file";
 import {
   getCustomRangePeriod,
   getFinancialYearOptions,
@@ -32,12 +33,7 @@ async function downloadReport(path: string, body: object, fallbackName: string) 
   const disposition = res.headers.get("Content-Disposition");
   const filenameMatch = disposition?.match(/filename="(.+)"/);
   const filename = filenameMatch?.[1] || fallbackName;
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  triggerBrowserDownload(blob, filename);
 }
 
 export function PadAccountReportSection() {

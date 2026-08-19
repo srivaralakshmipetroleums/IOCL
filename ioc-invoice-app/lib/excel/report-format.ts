@@ -34,8 +34,10 @@ function parseIsoMonth(isoDate: string) {
 }
 
 export function formatExcelDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
+  const iso = (isoDate || "").slice(0, 10);
+  const [year, month, day] = iso.split("-").map(Number);
   const shortMonth = MONTH_NAMES_SHORT[month - 1];
+  if (!year || !shortMonth || !day) return isoDate || "";
   return `${String(day).padStart(2, "0")}-${shortMonth}-${String(year).slice(-2)}`;
 }
 

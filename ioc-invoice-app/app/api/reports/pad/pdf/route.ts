@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { binaryFileResponse } from "@/lib/http/binary-file-response";
 import { loadPadReportDataset, type PadReportPeriod } from "@/lib/reports/load-pad-report";
 import { generatePadPdfReport } from "@/lib/reports/pad-pdf-report";
 
@@ -32,12 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     const data = await loadPadReportDataset(period);
     const { buffer, filename } = await generatePadPdfReport(data);
-    return new NextResponse(new Uint8Array(buffer), {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
-    });
+    return binaryFileResponse(buffer, filename, "application/pdf");
   } catch (err) {
     const message = err instanceof Error ? err.message : "PAD PDF report failed";
     console.error("[reports/pad/pdf]", message);

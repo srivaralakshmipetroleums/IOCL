@@ -30,6 +30,7 @@ describe("excel-mapping", () => {
       "Indian Oil Corporation — Invoice Report  |  July 2026"
     );
     expect(formatExcelDate("2026-07-04")).toBe("04-Jul-26");
+    expect(formatExcelDate("2026-07-04T00:00:00.000Z")).toBe("04-Jul-26");
   });
 
   it("fixture EBMS row matches PRD values", () => {

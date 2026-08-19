@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { binaryFileResponse, EXCEL_CONTENT_TYPE } from "@/lib/http/binary-file-response";
 import { loadPadReportDataset, type PadReportPeriod } from "@/lib/reports/load-pad-report";
 import { generatePadExcelReport } from "@/lib/reports/pad-excel-report";
 
@@ -32,12 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     const data = await loadPadReportDataset(period);
     const { buffer, filename } = await generatePadExcelReport(data);
-    return new NextResponse(new Uint8Array(buffer), {
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
-    });
+    return binaryFileResponse(buffer, filename, EXCEL_CONTENT_TYPE);
   } catch (err) {
     const message = err instanceof Error ? err.message : "PAD Excel report failed";
     console.error("[reports/pad/excel]", message);

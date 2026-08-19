@@ -54,6 +54,18 @@ export function createPadWorkbook() {
   return workbook;
 }
 
+function sanitizeSheetName(name: string): string {
+  return name.replace(/[:\\/?*\[\]]/g, " ").replace(/&/g, "and").slice(0, 31);
+}
+
+function sanitizeCellValue(value: string | number | null | undefined): string | number {
+  if (value == null || value === "") return "";
+  if (typeof value === "number") return Number.isFinite(value) ? value : "";
+  const text = String(value);
+  if (/^[=+\-@]/.test(text)) return `'${text}`;
+  return text;
+}
+
 export function addPadSheet(
   workbook: ExcelJS.Workbook,
   name: string,
@@ -62,13 +74,12 @@ export function addPadSheet(
   kinds: PadColumnKind[],
   widths: number[]
 ) {
-  const sheet = workbook.addWorksheet(name.slice(0, 31), {
+  const sheet = workbook.addWorksheet(sanitizeSheetName(name), {
     views: [{ state: "frozen", ySplit: 2 }],
     pageSetup: {
       orientation: "landscape",
       fitToPage: true,
       fitToWidth: 1,
-      fitToHeight: 0,
       paperSize: 9,
     },
   });
@@ -96,7 +107,7 @@ export function addPadSheet(
     sheet.getColumn(index + 1).width = width;
   });
 
-  sheet.headerFooter.oddFooter = "&LSri Varalakshmi Petroleums — PAD Account Report&RPage &P of &N";
+  sheet.headerFooter.oddFooter = "&LSri Varalakshmi Petroleums - PAD Account Report&RPage &P of &N";
 
   return { sheet, kinds, lastCol };
 }
@@ -108,7 +119,7 @@ export function addPadDataRow(
   dataIndex: number,
   rowFill?: string
 ) {
-  const row = sheet.addRow(values);
+  const row = sheet.addRow(values.map((value) => sanitizeCellValue(value)));
   const fill = rowFill ?? (dataIndex % 2 === 1 ? PAD_REPORT_COLORS.altRowBg : undefined);
 
   values.forEach((_, index) => {
@@ -134,7 +145,7 @@ export function addPadTotalRow(
   labels: Array<string | number | null>,
   kinds: PadColumnKind[]
 ) {
-  const row = sheet.addRow(labels);
+  const row = sheet.addRow(labels.map((value) => sanitizeCellValue(value)));
   labels.forEach((_, index) => {
     const cell = row.getCell(index + 1);
     const kind = kinds[index] ?? "text";

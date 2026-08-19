@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { PadAccountReportSection } from "@/components/reports/PadAccountReportSection";
+import { triggerBrowserDownload } from "@/lib/download-file";
 import { Download } from "lucide-react";
 
 export function ReportsPage() {
@@ -15,9 +16,11 @@ export function ReportsPage() {
   const [supplier, setSupplier] = useState("");
   const [product, setProduct] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleExport() {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/reports/excel", {
         method: "POST",
@@ -25,21 +28,20 @@ export function ReportsPage() {
         body: JSON.stringify({ dateFrom, dateTo, supplier, product }),
       });
 
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({ error: "Export failed" }));
+        throw new Error(payload.error || "Export failed");
+      }
 
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition");
       const filenameMatch = disposition?.match(/filename="(.+)"/);
       const filename = filenameMatch?.[1] || "IOC_Invoices.xlsx";
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      triggerBrowserDownload(blob, filename);
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Export failed";
       console.error(err);
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -80,6 +82,8 @@ export function ReportsPage() {
               <Input placeholder="Filter by product" value={product} onChange={(e) => setProduct(e.target.value)} />
             </div>
           </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <Button onClick={handleExport} disabled={loading} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />

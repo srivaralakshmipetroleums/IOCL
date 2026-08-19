@@ -150,7 +150,7 @@ function addMonthPnlSheet(
   ];
   const { sheet, lastCol } = addPadSheet(
     workbook,
-    "Month P&L",
+    "Month PnL",
     title,
     headers,
     kinds,

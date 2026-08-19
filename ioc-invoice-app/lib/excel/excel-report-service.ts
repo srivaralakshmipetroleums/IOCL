@@ -18,6 +18,7 @@ import {
   styleHeaderRow,
   styleTitleRow,
 } from "@/lib/excel/report-styles";
+import { fetchAllPages, fetchByIdsInChunks } from "@/lib/supabase/fetch-all";
 
 export interface ReportFilters {
   dateFrom?: string;
@@ -34,48 +35,53 @@ export interface ReportResult {
 export class ExcelReportService {
   async generateInvoiceReport(filters: ReportFilters = {}): Promise<ReportResult> {
     const supabase = await createServiceClient();
+    const dateFrom = filters.dateFrom?.trim() || undefined;
+    const dateTo = filters.dateTo?.trim() || undefined;
+    const supplier = filters.supplier?.trim() || undefined;
+    const product = filters.product?.trim() || undefined;
 
-    let invoiceQuery = supabase
-      .from("invoices")
-      .select("id, invoice_date, supplier_name, invoice_number")
-      .in("status", [...DASHBOARD_INVOICE_STATUSES]);
+    const invoices = await fetchAllPages(async (from, to) => {
+      let query = supabase
+        .from("invoices")
+        .select("id, invoice_date, supplier_name, invoice_number")
+        .in("status", [...DASHBOARD_INVOICE_STATUSES])
+        .order("invoice_date")
+        .order("id")
+        .range(from, to);
 
-    if (filters.dateFrom) invoiceQuery = invoiceQuery.gte("invoice_date", filters.dateFrom);
-    if (filters.dateTo) invoiceQuery = invoiceQuery.lte("invoice_date", filters.dateTo);
-    if (filters.supplier) {
-      invoiceQuery = invoiceQuery.ilike("supplier_name", `%${filters.supplier}%`);
-    }
+      if (dateFrom) query = query.gte("invoice_date", dateFrom);
+      if (dateTo) query = query.lte("invoice_date", dateTo);
+      if (supplier) query = query.ilike("supplier_name", `%${supplier}%`);
 
-    const { data: invoices, error: invoiceError } = await invoiceQuery.order("invoice_date");
-    if (invoiceError) throw new Error(invoiceError.message);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    });
 
-    const invoiceMap = new Map((invoices || []).map((invoice) => [invoice.id, invoice]));
-    const invoiceIds = (invoices || []).map((invoice) => invoice.id);
+    const invoiceMap = new Map(invoices.map((invoice) => [invoice.id, invoice]));
+    const invoiceIds = invoices.map((invoice) => invoice.id);
 
-    let lineItems: Array<{
-      id: string;
-      invoice_id: string;
-      product: string | null;
-      invoice_value: number | null;
-      hsn_code: string | null;
-      output_quantity: number | null;
-      output_measure: string | null;
-    }> = [];
+    const rawLineItems = invoiceIds.length
+      ? await fetchByIdsInChunks(invoiceIds, (chunk) =>
+          fetchAllPages(async (from, to) => {
+            const { data, error } = await supabase
+              .from("invoice_line_items")
+              .select("id, invoice_id, product, invoice_value, hsn_code, output_quantity, output_measure")
+              .in("invoice_id", chunk)
+              .order("id")
+              .range(from, to);
+            if (error) throw new Error(error.message);
+            return data ?? [];
+          })
+        )
+      : [];
 
-    if (invoiceIds.length) {
-      const { data, error: lineItemError } = await supabase
-        .from("invoice_line_items")
-        .select("id, invoice_id, product, invoice_value, hsn_code, output_quantity, output_measure")
-        .in("invoice_id", invoiceIds);
-
-      if (lineItemError) throw new Error(lineItemError.message);
-      lineItems = (data || []).filter((item) => {
-        const product = normalizeFuelProduct(item.product);
-        if (!product) return false;
-        if (!filters.product) return true;
-        return product === filters.product;
-      });
-    }
+    const lineItems = rawLineItems.filter((item) => {
+      const normalized = normalizeFuelProduct(item.product);
+      if (!normalized) return false;
+      if (!product) return true;
+      return normalized === product || (item.product || "").toLowerCase().includes(product.toLowerCase());
+    });
 
     const rows = lineItems
       .filter((item) => isFuelProduct(item.product))
@@ -92,9 +98,9 @@ export class ExcelReportService {
       });
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(buildSheetName(filters.dateFrom));
+    const sheet = workbook.addWorksheet(buildSheetName(dateFrom));
 
-    sheet.getCell("A1").value = buildReportTitle(filters.dateFrom);
+    sheet.getCell("A1").value = buildReportTitle(dateFrom);
     styleTitleRow(sheet);
 
     sheet.addRow([...REPORT_COLUMNS]);
@@ -125,7 +131,7 @@ export class ExcelReportService {
     const buffer = await workbook.xlsx.writeBuffer();
     return {
       buffer: Buffer.from(buffer),
-      filename: buildReportFilename(filters.dateFrom),
+      filename: buildReportFilename(dateFrom),
     };
   }
 }
