@@ -15,10 +15,16 @@ export function buildGmailBeforeDate(year: number, month: number): string {
   return `${nextYear}/${String(nextMonth).padStart(2, "0")}/01`;
 }
 
+function buildSubjectQuery(subjects: string[]): string {
+  if (!subjects.length) return "";
+  if (subjects.length === 1) return `subject:"${subjects[0]}"`;
+  return `{${subjects.map((subject) => `subject:"${subject}"`).join(" ")}}`;
+}
+
 function buildBaseQueryParts(
-  config: Pick<GmailInvoiceConfig, "sender" | "subject" | "requireAttachment">
+  config: Pick<GmailInvoiceConfig, "sender" | "subjects" | "requireAttachment">
 ): string[] {
-  const parts = [`from:${config.sender}`, `subject:"${config.subject}"`];
+  const parts = [`from:${config.sender}`, buildSubjectQuery(config.subjects)];
 
   if (config.requireAttachment) {
     parts.push("has:attachment");
@@ -30,7 +36,7 @@ function buildBaseQueryParts(
 export function buildGmailSearchQuery(
   year: number,
   month: number,
-  config: Pick<GmailInvoiceConfig, "sender" | "subject" | "requireAttachment">
+  config: Pick<GmailInvoiceConfig, "sender" | "subjects" | "requireAttachment">
 ): string {
   const parts = buildBaseQueryParts(config);
   parts.push(`after:${buildGmailAfterDate(year, month)}`);
@@ -42,7 +48,7 @@ export function buildGmailSearchQuery(
 export function buildGmailSearchQueryForRange(
   dateFrom: string,
   dateToInclusive: string,
-  config: Pick<GmailInvoiceConfig, "sender" | "subject" | "requireAttachment">
+  config: Pick<GmailInvoiceConfig, "sender" | "subjects" | "requireAttachment">
 ): string {
   const parts = buildBaseQueryParts(config);
   parts.push(`after:${isoToGmailDate(dateFrom)}`);

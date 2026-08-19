@@ -11,8 +11,14 @@ describe("fuel-products", () => {
     expect(normalizeFuelProduct("MS")).toBe("EBMS");
     expect(normalizeFuelProduct("MS-BVI-E12")).toBe("EBMS");
     expect(normalizeFuelProduct("ms-bvi-e12")).toBe("EBMS");
+    expect(normalizeFuelProduct("MS - BS VI")).toBe("EBMS");
+    expect(normalizeFuelProduct("10% ETH. BLN. MS BS VI")).toBe("EBMS");
+    expect(normalizeFuelProduct("RS - 10% ETH. BLN. MS BS VI")).toBe("EBMS");
+    expect(normalizeFuelProduct("RS-MS-BSVI-E10")).toBe("EBMS");
     expect(normalizeFuelProduct("HSD")).toBe("HSD-BSVI");
+    expect(normalizeFuelProduct("HSD - BS VI")).toBe("HSD-BSVI");
     expect(isFuelProduct("MS-BVI-E12")).toBe(true);
+    expect(isFuelProduct("10% ETH. BLN. MS BS VI")).toBe(true);
     expect(isFuelProduct("HSD")).toBe(true);
   });
 

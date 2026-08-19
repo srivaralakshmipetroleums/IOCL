@@ -8,8 +8,12 @@ export type FuelProduct = (typeof FUEL_PRODUCTS)[number];
  */
 function isMotorSpiritProduct(upper: string): boolean {
   if (upper === "MS") return true;
-  if (/^MS(?:[\s\-_./]|$)/.test(upper)) return true;
-  if (/(?:^|[\s\-_./])MS$/.test(upper)) return true;
+  if (upper.includes("MOTOR SPIRIT")) return true;
+  if (upper.includes("ETH. BLN") || upper.includes("ETH BLN") || upper.includes("ETHANOL BL")) {
+    return true;
+  }
+  // Standalone MS token, including older names like "10% ETH. BLN. MS BS VI"
+  if (/(?:^|[\s\-_./])MS(?:[\s\-_./]|$)/.test(upper)) return true;
   return false;
 }
 

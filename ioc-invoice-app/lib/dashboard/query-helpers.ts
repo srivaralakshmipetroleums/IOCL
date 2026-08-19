@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DashboardFilters } from "./filters";
 import { DASHBOARD_INVOICE_STATUSES } from "./constants";
-import { isFuelProduct } from "./fuel-products";
+import { normalizeFuelProduct } from "./fuel-products";
 import { allocateFuelInvoiceValues } from "./fuel-line-values";
 
 export interface FilteredInvoice {
@@ -46,15 +46,18 @@ export async function getFilteredLineItems(
 ) {
   if (!invoiceIds.length) return [];
 
-  let query = supabase
+  const query = supabase
     .from("invoice_line_items")
     .select("id, invoice_id, product, output_quantity, invoice_value, hsn_code")
     .in("invoice_id", invoiceIds);
 
-  if (productFilter) query = query.ilike("product", `%${productFilter}%`);
-
   const { data } = await query;
-  const fuelItems = (data || []).filter((item) => isFuelProduct(item.product));
+  const fuelItems = (data || []).filter((item) => {
+    const product = normalizeFuelProduct(item.product);
+    if (!product) return false;
+    if (!productFilter) return true;
+    return product === productFilter;
+  });
   if (!invoices?.length) return fuelItems;
 
   const { data: allItems } = await supabase

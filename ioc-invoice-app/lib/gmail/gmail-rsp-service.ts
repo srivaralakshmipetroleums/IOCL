@@ -330,5 +330,46 @@ export async function finalizeGmailRspFetchJob(
     .eq("id", jobId);
 }
 
+export async function fetchGmailRspDateRange(
+  userId: string,
+  dateFrom: string,
+  dateToInclusive: string
+): Promise<{
+  jobId: string;
+  query: string;
+  emailsFound: number;
+  pricesUpserted: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}> {
+  const scan = await scanGmailRspRange(userId, dateFrom, dateToInclusive);
+  const errors: string[] = [];
+  let pricesUpserted = 0;
+  let skipped = scan.skippedAlready;
+  let failed = 0;
+
+  for (const messageId of scan.pendingMessageIds) {
+    const partial = await processGmailRspMessage(userId, messageId);
+    pricesUpserted += partial.pricesUpserted;
+    skipped += partial.skipped;
+    failed += partial.failed;
+    errors.push(...partial.errors);
+  }
+
+  const result = {
+    jobId: scan.jobId,
+    query: scan.query,
+    emailsFound: scan.emailsFound,
+    pricesUpserted,
+    skipped,
+    failed,
+    errors,
+  };
+
+  await finalizeGmailRspFetchJob(scan.jobId, result);
+  return result;
+}
+
 // Re-export scope for tests if needed
 export { GMAIL_SCOPES };

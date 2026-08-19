@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:pad": "npx tsx scripts/import-pad-statements.ts",
-    "import:retail-prices": "npx tsx scripts/import-retail-prices.ts"
+    "import:retail-prices": "npx tsx scripts/import-retail-prices.ts",
+    "cron:gmail-weekly": "npx tsx scripts/run-weekly-gmail-sync.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

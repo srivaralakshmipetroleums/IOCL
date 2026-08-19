@@ -63,18 +63,18 @@ export class ExcelReportService {
     }> = [];
 
     if (invoiceIds.length) {
-      let lineItemQuery = supabase
+      const { data, error: lineItemError } = await supabase
         .from("invoice_line_items")
         .select("id, invoice_id, product, invoice_value, hsn_code, output_quantity, output_measure")
         .in("invoice_id", invoiceIds);
 
-      if (filters.product) {
-        lineItemQuery = lineItemQuery.ilike("product", `%${filters.product}%`);
-      }
-
-      const { data, error: lineItemError } = await lineItemQuery;
       if (lineItemError) throw new Error(lineItemError.message);
-      lineItems = data || [];
+      lineItems = (data || []).filter((item) => {
+        const product = normalizeFuelProduct(item.product);
+        if (!product) return false;
+        if (!filters.product) return true;
+        return product === filters.product;
+      });
     }
 
     const rows = lineItems
