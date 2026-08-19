@@ -105,9 +105,14 @@ export function getMultiMonthPeriod(selectedMonths: string[]): DashboardPeriod |
   };
 }
 
-export function getFinancialYearOptions(count = 4, now = new Date()): number[] {
+export function getFinancialYearOptions(now = new Date()): number[] {
   const current = getFinancialYearStartYear(now);
-  return Array.from({ length: count }, (_, i) => current - (count - 1) + i);
+  const earliest = 2020;
+  const years: number[] = [];
+  for (let year = earliest; year <= current; year++) {
+    years.push(year);
+  }
+  return years;
 }
 
 export function getRecentMonthOptions(count = 18, now = new Date()) {

@@ -28,10 +28,13 @@ function mapTransaction(row: Record<string, unknown>): PadTransactionRow {
 }
 
 export function isFuelSupplyRow(row: PadTransactionRow): boolean {
-  return (
-    (row.category === "FUEL_MS" || row.category === "FUEL_HSD") &&
-    row.item_text.toUpperCase().includes("PRODUCT SUPPLY INVOICE")
-  );
+  if (row.category !== "FUEL_MS" && row.category !== "FUEL_HSD") return false;
+
+  const text = row.item_text.trim().toUpperCase();
+  if (text.includes("PRODUCT SUPPLY INVOICE")) return true;
+
+  // Older PAD exports store only the 10-digit billing doc as item text.
+  return /^\d{10}$/.test(text) && (row.quantity ?? 0) > 0;
 }
 
 export function fuelProductFromCategory(row: PadTransactionRow): "MS" | "HSD" | null {

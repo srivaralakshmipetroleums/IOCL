@@ -105,6 +105,33 @@ describe("pad reconciliation", () => {
     expect(rows[0].billingDoc).toBe("7004932630");
   });
 
+  it("matches older PAD rows that only store the billing document number", () => {
+    const rows = reconcilePadWithInvoices(
+      [
+        padTx({
+          item_text: "0732293889",
+          document_number: "0732293889",
+          debit: 1575413,
+          quantity: 10,
+        }),
+      ],
+      [
+        {
+          id: "i1",
+          invoice_number: "732293889",
+          sap_entry_number: "732293889",
+          invoice_date: "2020-06-30",
+          invoice_total: 1575413,
+          quantityKl: 20,
+        },
+      ]
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("MATCHED");
+    expect(rows[0].billingDoc).toBe("0732293889");
+  });
+
   it("treats same billing doc and amount as matched even when quantity differs", () => {
     const rows = reconcilePadWithInvoices(
       [padTx({ quantity: 8, debit: 1183938 })],

@@ -136,9 +136,15 @@ export const MONTHS = [
   { value: 12, label: "December" },
 ];
 
-export function getYearOptions(): number[] {
-  const current = new Date().getFullYear();
-  return Array.from({ length: 6 }, (_, i) => current - 2 + i);
+export const EARLIEST_DATA_YEAR = 2020;
+
+export function getYearOptions(now = new Date()): number[] {
+  const current = now.getFullYear();
+  const years: number[] = [];
+  for (let year = EARLIEST_DATA_YEAR; year <= current; year++) {
+    years.push(year);
+  }
+  return years;
 }
 
 /** Returns the last N calendar months ending with the month of `fromDate`, oldest first. */

@@ -12,27 +12,36 @@ export async function GET(request: NextRequest) {
   const filters = getDashboardFilters(request.nextUrl.searchParams);
   const supabase = await createServiceClient();
 
-  const [padTransactions, invoicesResult, lineItemsResult] = await Promise.all([
+  const [padTransactions, invoicesResult] = await Promise.all([
     getPadTransactions(supabase, filters),
     supabase
       .from("invoices")
       .select("id, invoice_number, sap_entry_number, invoice_date, invoice_total")
       .gte("invoice_date", filters.dateFrom ?? "1900-01-01")
       .lte("invoice_date", filters.dateTo ?? "2099-12-31"),
-    supabase.from("invoice_line_items").select("invoice_id, output_quantity, product"),
   ]);
 
   if (invoicesResult.error) throw invoicesResult.error;
-  if (lineItemsResult.error) throw lineItemsResult.error;
+
+  const invoices = invoicesResult.data ?? [];
+  const invoiceIds = invoices.map((inv) => inv.id);
 
   const qtyByInvoice = new Map<string, number>();
-  for (const item of lineItemsResult.data ?? []) {
-    const litres = Number(item.output_quantity) || 0;
-    const kl = litres / 1000;
-    qtyByInvoice.set(item.invoice_id, (qtyByInvoice.get(item.invoice_id) ?? 0) + kl);
+  if (invoiceIds.length) {
+    const { data: lineItems, error: lineError } = await supabase
+      .from("invoice_line_items")
+      .select("invoice_id, output_quantity")
+      .in("invoice_id", invoiceIds);
+    if (lineError) throw lineError;
+
+    for (const item of lineItems ?? []) {
+      const litres = Number(item.output_quantity) || 0;
+      const kl = litres / 1000;
+      qtyByInvoice.set(item.invoice_id, (qtyByInvoice.get(item.invoice_id) ?? 0) + kl);
+    }
   }
 
-  const invoices = (invoicesResult.data ?? []).map((inv) => ({
+  const invoiceRows = invoices.map((inv) => ({
     id: inv.id,
     invoice_number: inv.invoice_number ?? "",
     sap_entry_number: inv.sap_entry_number ?? null,
@@ -42,7 +51,7 @@ export async function GET(request: NextRequest) {
   }));
 
   const fuelPadRows = padTransactions.filter(isFuelSupplyRow);
-  const rows = reconcilePadWithInvoices(fuelPadRows, invoices);
+  const rows = reconcilePadWithInvoices(fuelPadRows, invoiceRows);
 
   const summary = {
     total: rows.length,

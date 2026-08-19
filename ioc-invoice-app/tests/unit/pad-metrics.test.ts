@@ -42,6 +42,16 @@ describe("pad metrics", () => {
         fuelRow({ item_text: "7004796410 ': LICENSE FEE (SSLF) RECOVERY" })
       )
     ).toBe(false);
+    expect(
+      isFuelSupplyRow(
+        fuelRow({
+          item_text: "0732293889",
+          document_number: "0732293889",
+          quantity: 10,
+          category: "FUEL_HSD",
+        })
+      )
+    ).toBe(true);
   });
 
   it("looks up retail price by effective-from date", () => {

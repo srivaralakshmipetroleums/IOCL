@@ -3,6 +3,7 @@ import { getMonthRange, listMonthsInPeriod } from "@/lib/dashboard/filters";
 import {
   getCurrentMonthPeriod,
   getFinancialYearPeriod,
+  getFinancialYearOptions,
   getLast6MonthsPeriod,
   getMultiMonthPeriod,
   getSelectedMonthPeriod,
@@ -43,6 +44,12 @@ describe("dashboard period", () => {
     const period = getFinancialYearPeriod(2025);
     expect(period.dateFrom).toBe("2025-04-01");
     expect(period.dateTo).toBe("2026-03-31");
+  });
+
+  it("financial year options start from April 2020", () => {
+    const years = getFinancialYearOptions(new Date(2026, 7, 15));
+    expect(years[0]).toBe(2020);
+    expect(years[years.length - 1]).toBe(2026);
   });
 
   it("builds non-contiguous multi-month period", () => {
