@@ -10,6 +10,7 @@ export interface FilteredInvoice {
   invoice_date: string | null;
   invoice_total: number | null;
   invoice_number: string | null;
+  sap_entry_number: string | null;
   supplier_name: string | null;
 }
 
@@ -20,7 +21,7 @@ export async function getFilteredInvoices(
   const invoices = await fetchAllPages(async (from, to) => {
     let query = supabase
       .from("invoices")
-      .select("id, invoice_date, invoice_total, invoice_number, supplier_name")
+      .select("id, invoice_date, invoice_total, invoice_number, sap_entry_number, supplier_name")
       .in("status", [...DASHBOARD_INVOICE_STATUSES])
       .order("invoice_date")
       .order("id")

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { PadAccountReportSection } from "@/components/reports/PadAccountReportSection";
 import { Download } from "lucide-react";
 
 export function ReportsPage() {
@@ -48,7 +49,9 @@ export function ReportsPage() {
     <div className="space-y-4 sm:space-y-6">
       <div>
         <PageTitle>Reports</PageTitle>
-        <p className="mt-2 text-sm text-ioc-muted">Generate Excel reports in MS HSD format</p>
+        <p className="mt-2 text-sm text-ioc-muted">
+          Invoice Excel export and PAD / Accounts statements
+        </p>
       </div>
 
       <Card>
@@ -84,6 +87,8 @@ export function ReportsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <PadAccountReportSection />
     </div>
   );
 }

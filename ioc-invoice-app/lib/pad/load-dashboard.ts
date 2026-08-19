@@ -157,5 +157,7 @@ export async function loadPadDashboardData(
     fuelProfitByMonth: computeFuelProfitByMonth(profitRows),
     grossProfitByMonth,
     rateTrend,
+    invoices,
+    lineItems,
   };
 }
