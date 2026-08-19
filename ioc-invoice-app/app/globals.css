@@ -77,4 +77,25 @@
   .ioc-section-heading {
     @apply text-base font-semibold text-ioc-navy;
   }
+
+  .ioc-login-bg {
+    background-color: var(--ioc-page-bg);
+    background-image: url("/branding/ioc-login-banner1.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .ioc-login-card {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.52) 0%,
+      rgba(255, 255, 255, 0.38) 50%,
+      rgba(248, 251, 255, 0.48) 100%
+    );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 8px 32px rgba(0, 43, 92, 0.14);
+  }
 }

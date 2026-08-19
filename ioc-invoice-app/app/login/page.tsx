@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IndianOilLogo } from "@/components/brand/IndianOilLogo";
 import { ENABLE_SIGNUP } from "@/lib/auth/auth-config";
 
 export default function LoginPage() {
@@ -49,23 +49,38 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-ioc-page">
-      <header className="ioc-header-gradient px-4 py-4 text-white sm:px-6 sm:py-5">
-        <div className="mx-auto flex max-w-md items-center gap-3 sm:gap-4">
-          <IndianOilLogo size="lg" />
-          <div>
-            <p className="font-semibold">Sri Varalakshmi Petroleums</p>
-            <p className="text-sm text-white/80">IOC Invoice Management &amp; Reporting System</p>
+    <div className="relative flex min-h-screen flex-col">
+      <div className="ioc-login-bg pointer-events-none absolute inset-0" aria-hidden="true" />
+
+      <header className="relative z-10 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <Image
+            src="/branding/Branded-logo.png"
+            alt="Sri Varalakshmi Petroleums Narpala"
+            width={220}
+            height={140}
+            className="h-16 w-auto shrink-0 sm:h-20"
+            priority
+          />
+          <div className="min-w-0 border-l-2 border-ioc-orange pl-3 sm:pl-4">
+            <p className="font-semibold text-ioc-navy text-sm sm:text-base">
+              Sri Varalakshmi Petroleums
+            </p>
+            <p className="mt-0.5 text-xs text-ioc-muted sm:text-sm">
+              IOC Invoice Management &amp; Reporting System
+            </p>
           </div>
         </div>
-        <div className="mt-3 h-[3px] bg-ioc-orange" />
       </header>
 
-      <div className="flex flex-1 items-center justify-center p-6">
-        <Card className="w-full max-w-md border-ioc-border shadow-ioc">
+      <div className="relative z-10 flex flex-1 items-center justify-center p-6">
+        <Card className="ioc-login-card w-full max-w-md border bg-transparent shadow-none">
           <CardHeader className="text-center">
+            <div className="mx-auto mb-3 h-1 w-14 rounded-full bg-ioc-orange" />
             <CardTitle className="text-ioc-navy">Sign In</CardTitle>
-            <CardDescription>Access your invoice management workspace</CardDescription>
+            <CardDescription className="text-ioc-text/80">
+              Access your invoice management workspace
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -74,6 +89,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
+                  className="border-white/60 bg-white/85"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -84,6 +100,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
+                  className="border-white/60 bg-white/85"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
