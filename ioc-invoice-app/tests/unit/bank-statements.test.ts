@@ -320,10 +320,24 @@ describe("bank statement helpers", () => {
     ).toBe("Palleneni Bhaktha");
     expect(
       extractTransferPartyName(
+        "CHEQUE DEPOSIT---440289",
+        "CHEQUE",
+        "TRANSFER TO 39391912489                           GUDAPAREDDY BHASKAR RE / 440289"
+      )
+    ).toBe("Gudapareddy Bhaskar Reddy");
+    expect(
+      extractTransferPartyName(
         "BY TRANSFER-RTGS UTR NO: BARBR52026031800940949--BOGGU NAGARJUNA",
+        "RTGS",
+        "TRANSFER FROM 99826044309 / BOGGU NAGARJUNA"
+      )
+    ).toBe("Boggu Nagarjuna");
+    expect(
+      extractTransferPartyName(
+        "BY TRANSFER- TRANSFER FROM 4430 RTGS UTR NO: 99826044309 / PUNBR5202504051 MALIKIREDDY 0679882- VENKATA MALIKIREDDY CHANDRAKANTHA",
         "RTGS"
       )
-    ).toBe("BOGGU NAGARJUNA");
+    ).toBe("Venkata Malikireddy");
   });
 
   it("groups transfer channels by counterparty", () => {
