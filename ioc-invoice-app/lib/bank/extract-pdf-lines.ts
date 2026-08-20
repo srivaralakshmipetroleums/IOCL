@@ -1,12 +1,10 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export async function extractPdfLines(filePath: string): Promise<string[]> {
   const data = new Uint8Array(readFileSync(filePath));
   const pdf = await getDocument({
     data,
-    disableWorker: true,
-    isEvalSupported: false,
     verbosity: 0,
   }).promise;
 
