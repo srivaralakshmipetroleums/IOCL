@@ -113,10 +113,18 @@ export function BankKpiCards({ summary, isLoading }: BankKpiCardsProps) {
           sub="Pump cash banked"
         />
         <KpiCard
-          label="PhonePe / Paytm"
+          label="PhonePe"
           value={formatKpi(summary.phonePe)}
           icon={Smartphone}
           iconBg="bg-ioc-processing-light text-ioc-blue"
+          sub="YESB NEFT · PhonePe Limited"
+        />
+        <KpiCard
+          label="Paytm"
+          value={formatKpi(summary.paytm)}
+          icon={Smartphone}
+          iconBg="bg-sky-100 text-sky-800"
+          sub="YESB NEFT · One97"
         />
         <KpiCard
           label="Card Settlements"

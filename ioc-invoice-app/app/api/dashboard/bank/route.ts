@@ -17,5 +17,9 @@ export async function GET(request: NextRequest) {
     balanceTrend: data.balanceTrend,
     cashFlow: data.cashFlow,
     categories: data.categories,
+    transferChannels: data.transferChannels,
+    walletGrain: data.walletGrain,
+    walletCredits: data.walletCredits,
+    walletMissedDays: data.walletMissedDays,
   });
 }

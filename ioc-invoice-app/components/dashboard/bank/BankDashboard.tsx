@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Upload } from "lucide-react";
 import { BankCharts } from "@/components/dashboard/bank/BankCharts";
 import { BankKpiCards } from "@/components/dashboard/bank/BankKpiCards";
+import { BankTransferBreakdown } from "@/components/dashboard/bank/BankTransferBreakdown";
 import { BankLedgerTable, type BankLedgerRow } from "@/components/dashboard/bank/BankLedgerTable";
 import { SectionTitle } from "@/components/dashboard/DashboardParts";
 import { DashboardPeriodSelector } from "@/components/dashboard/DashboardPeriodSelector";
@@ -18,6 +19,10 @@ import type {
   BankCashFlowMonth,
   BankCategoryTotal,
   BankExecutiveSummary,
+  BankTransferChannelBreakdown,
+  WalletCreditGrain,
+  WalletCreditPoint,
+  WalletMissedDay,
 } from "@/lib/bank/metrics";
 
 interface BankDashboardPayload {
@@ -25,6 +30,10 @@ interface BankDashboardPayload {
   balanceTrend: BankBalancePoint[];
   cashFlow: BankCashFlowMonth[];
   categories: BankCategoryTotal[];
+  transferChannels: BankTransferChannelBreakdown[];
+  walletGrain: WalletCreditGrain;
+  walletCredits: WalletCreditPoint[];
+  walletMissedDays: WalletMissedDay[];
 }
 
 export function BankDashboard() {
@@ -112,7 +121,13 @@ export function BankDashboard() {
         balanceTrend={data?.balanceTrend ?? []}
         cashFlow={data?.cashFlow ?? []}
         categories={data?.categories ?? []}
+        walletCredits={data?.walletCredits ?? []}
+        walletGrain={data?.walletGrain ?? "month"}
+        walletMissedDays={data?.walletMissedDays ?? []}
       />
+
+      <SectionTitle>Transfer channels</SectionTitle>
+      <BankTransferBreakdown channels={data?.transferChannels} isLoading={isLoading} />
 
       <SectionTitle>Transaction Ledger</SectionTitle>
       <BankLedgerTable rows={transactions} isLoading={ledgerLoading} />

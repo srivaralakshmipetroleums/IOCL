@@ -5,6 +5,11 @@ import {
   computeBankCashFlowByMonth,
   computeBankCategoryTotals,
   computeBankSummary,
+  computeBankTransferChannelBreakdown,
+  computeWalletCreditSeries,
+  computeWalletMissedDays,
+  fillWalletCreditSeries,
+  walletCreditGrain,
   type BankCashFlowMonth,
 } from "@/lib/bank/metrics";
 import { getBankStatements, getBankTransactions } from "@/lib/bank/query-helpers";
@@ -29,6 +34,7 @@ export async function loadBankDashboardData(
     getBankTransactions(supabase, filters),
     getBankStatements(supabase, filters),
   ]);
+  const grain = walletCreditGrain(filters.dateFrom, filters.dateTo);
 
   return {
     transactions,
@@ -43,5 +49,14 @@ export async function loadBankDashboardData(
       emptyCashFlow
     ),
     categories: computeBankCategoryTotals(transactions),
+    transferChannels: computeBankTransferChannelBreakdown(transactions),
+    walletGrain: grain,
+    walletCredits: fillWalletCreditSeries(
+      computeWalletCreditSeries(transactions, grain),
+      grain,
+      filters.dateFrom,
+      filters.dateTo
+    ),
+    walletMissedDays: computeWalletMissedDays(transactions),
   };
 }

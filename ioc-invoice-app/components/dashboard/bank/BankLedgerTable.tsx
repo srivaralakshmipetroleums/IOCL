@@ -23,6 +23,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   IOCL_PAYMENT: "bg-ioc-orange-light text-ioc-orange",
   IOCL_CREDIT: "bg-ioc-success-light text-ioc-success",
   PHONEPE: "bg-ioc-processing-light text-ioc-blue",
+  PAYTM: "bg-sky-100 text-sky-800",
   CARD_SETTLEMENT: "bg-blue-100 text-blue-800",
   POS_CARD: "bg-indigo-100 text-indigo-800",
   CASH_DEPOSIT: "bg-ioc-success-light text-ioc-success",
@@ -121,27 +122,37 @@ export function BankLedgerTable({ rows, isLoading }: BankLedgerTableProps) {
       </div>
 
       {monthsInView.length > 1 && (
-        <div className="flex items-center justify-between border-b border-ioc-border bg-ioc-surface/50 px-4 py-2">
+        <div className="flex items-center justify-between gap-2 border-b border-ioc-border bg-ioc-surface/50 px-3 py-2 sm:px-4">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
             disabled={safePageIndex === 0}
+            className="shrink-0"
           >
             <ChevronLeft className="h-4 w-4" />
-            Previous
+            <span className="hidden sm:inline">Previous</span>
           </Button>
-          <span className="text-sm font-medium text-ioc-navy">
-            {activeMonth ? formatMonthLabel(activeMonth) : "—"} — Page {safePageIndex + 1} of{" "}
-            {monthsInView.length}
-          </span>
+          <div className="min-w-0 flex-1 text-center">
+            <p className="text-sm font-medium text-ioc-navy">
+              {activeMonth ? formatMonthLabel(activeMonth) : "—"}
+              <span className="hidden sm:inline">
+                {" "}
+                — Page {safePageIndex + 1} of {monthsInView.length}
+              </span>
+            </p>
+            <p className="text-xs text-ioc-muted sm:hidden">
+              Page {safePageIndex + 1} of {monthsInView.length}
+            </p>
+          </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPageIndex((p) => Math.min(monthsInView.length - 1, p + 1))}
             disabled={safePageIndex >= monthsInView.length - 1}
+            className="shrink-0"
           >
-            Next
+            <span className="hidden sm:inline">Next</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
