@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   LogOut,
   Wallet,
+  Landmark,
 } from "lucide-react";
 import { IndianOilLogo } from "@/components/brand/IndianOilLogo";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -23,6 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/account", label: "Account", icon: Wallet },
+  { href: "/bank", label: "Bank", icon: Landmark },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/upload", label: "Upload Invoices", icon: Upload },
   { href: "/gmail", label: "Gmail Invoices", icon: Mail, badge: "New" },
