@@ -32,8 +32,20 @@ describe("invoice MS/HSD purchase rate trend", () => {
     expect(trend[0].msKl).toBe(2);
     expect(trend[0].hsdKl).toBe(1);
     expect(trend[0].totalKl).toBe(3);
-    expect(trend[0].msSpreadPerL).toBeCloseTo(7.47);
-    expect(trend[0].hsdSpreadPerL).toBeCloseTo(7.67);
+    expect(trend[0].msSpreadPerL).toBe(7.47);
+    expect(trend[0].hsdSpreadPerL).toBe(7.67);
+  });
+
+  it("rounds spread to 2 decimals before fuel margin", () => {
+    const trend = computeInvoiceMsHsdRateTrend(
+      [{ id: "i1", invoice_date: "2025-04-08" }],
+      [{ invoice_id: "i1", product: "HSD-BSVI", invoice_value: 4373889.92, output_quantity: 46000 }],
+      [{ product: "HSD", effective_from: "2025-01-01", price_per_litre: 97.67 }]
+    );
+
+    expect(trend[0].hsdSpreadPerL).toBe(2.59);
+    const months = computeInvoiceGrossProfitByMonth(trend, []);
+    expect(months[0].hsdProfit).toBe(119_140);
   });
 
   it("adds PAD dealer margin and discounts and subtracts charges", () => {

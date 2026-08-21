@@ -2,7 +2,8 @@
 
 import { FileText, IndianRupee, Droplets, Layers, TrendingUp, TrendingDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatIndianNumber, formatKL, formatCrores } from "@/lib/dashboard/format";
+import { formatIndianNumber, formatKL } from "@/lib/dashboard/format";
+import { MoneyKpiValue } from "@/components/dashboard/MoneyKpiValue";
 import { FUEL_PRODUCTS } from "@/lib/dashboard/fuel-products";
 import { cn } from "@/lib/utils";
 
@@ -78,9 +79,9 @@ export function KpiCards({
       iconBg: "bg-ioc-orange-light text-ioc-orange",
       trend: trends?.value,
       content: (
-        <p className="mt-1 text-2xl font-bold text-ioc-navy md:text-[28px]">
-          {formatCrores(totalValue)}
-        </p>
+        <>
+          <MoneyKpiValue amount={totalValue} className="mt-1 text-2xl md:text-[28px]" />
+        </>
       ),
     },
     {

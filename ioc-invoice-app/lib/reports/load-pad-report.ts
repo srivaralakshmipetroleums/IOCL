@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import type { DashboardFilters } from "@/lib/dashboard/filters";
 import { normalizeFuelProduct } from "@/lib/dashboard/fuel-products";
+import { fuelSpreadPerLitre, fuelMarginFromSpread } from "@/lib/dashboard/format";
 import { loadPadDashboardData } from "@/lib/pad/load-dashboard";
 import { isFuelSupplyRow } from "@/lib/pad/query-helpers";
 import { isChargeRow } from "@/lib/pad/fee-classify";
@@ -138,8 +139,7 @@ export async function loadPadReportDataset(period: PadReportPeriod): Promise<Pad
     const value = Number(item.invoice_value) || 0;
     const purchasePerL = litres > 0 ? value / litres : null;
     const rspPerL = date ? lookup(product === "EBMS" ? "MS" : "HSD", date) : null;
-    const spreadPerL =
-      purchasePerL != null && rspPerL != null ? rspPerL - purchasePerL : null;
+    const spreadPerL = fuelSpreadPerLitre(rspPerL, purchasePerL);
 
     fuelLines.push({
       invoiceDate: date,
@@ -151,7 +151,7 @@ export async function loadPadReportDataset(period: PadReportPeriod): Promise<Pad
       purchasePerL,
       rspPerL,
       spreadPerL,
-      lineProfit: spreadPerL != null ? spreadPerL * litres : null,
+      lineProfit: fuelMarginFromSpread(spreadPerL, litres),
       hsn: item.hsn_code || "",
     });
   }

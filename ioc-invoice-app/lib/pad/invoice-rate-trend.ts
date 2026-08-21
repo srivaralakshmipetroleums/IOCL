@@ -1,5 +1,6 @@
 import { isChargeRow } from "@/lib/pad/fee-classify";
 import { normalizeFuelProduct } from "@/lib/dashboard/fuel-products";
+import { fuelSpreadPerLitre, roundMoney } from "@/lib/dashboard/format";
 import { monthKey } from "@/lib/pad/query-helpers";
 import { buildRetailPriceLookup } from "@/lib/pad/retail-price-lookup";
 import type { PadGrossProfitMonth, PadRateTrendPoint } from "@/lib/pad/metrics";
@@ -74,10 +75,8 @@ export function computeInvoiceMsHsdRateTrend(
         hsdPurchasePerL,
         msRetailPerL,
         hsdRetailPerL,
-        msSpreadPerL:
-          msRetailPerL != null && msPurchasePerL != null ? msRetailPerL - msPurchasePerL : null,
-        hsdSpreadPerL:
-          hsdRetailPerL != null && hsdPurchasePerL != null ? hsdRetailPerL - hsdPurchasePerL : null,
+        msSpreadPerL: fuelSpreadPerLitre(msRetailPerL, msPurchasePerL),
+        hsdSpreadPerL: fuelSpreadPerLitre(hsdRetailPerL, hsdPurchasePerL),
         msKl,
         hsdKl,
         totalKl: msKl + hsdKl,
@@ -123,8 +122,8 @@ export function computeInvoiceGrossProfitByMonth(
 
   for (const row of rateTrend) {
     const monthRow = entry(row.month);
-    monthRow.msProfit = (row.msSpreadPerL ?? 0) * row.msKl * 1000;
-    monthRow.hsdProfit = (row.hsdSpreadPerL ?? 0) * row.hsdKl * 1000;
+    monthRow.msProfit = roundMoney((row.msSpreadPerL ?? 0) * row.msKl * 1000);
+    monthRow.hsdProfit = roundMoney((row.hsdSpreadPerL ?? 0) * row.hsdKl * 1000);
   }
 
   for (const tx of transactions) {

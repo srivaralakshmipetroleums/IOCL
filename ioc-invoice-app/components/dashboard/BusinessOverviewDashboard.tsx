@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { SectionTitle } from "@/components/dashboard/DashboardParts";
 import { LineItemsTable, type LineItemRow } from "@/components/dashboard/LineItemsTable";
+import { MoneyKpiValue } from "@/components/dashboard/MoneyKpiValue";
 import { IOC_CHART } from "@/lib/dashboard/constants";
 import type { DashboardAnalytics, MonthRank } from "@/lib/dashboard/analytics/types";
 import {
@@ -139,7 +140,7 @@ export function BusinessOverviewDashboard({
         </div>
         <div className="ioc-card p-5">
           <p className="text-sm text-ioc-muted">Fuel Value</p>
-          <p className="mt-1 text-2xl font-bold text-ioc-navy">{formatCrores(snapshot.fuelValue)}</p>
+          <MoneyKpiValue amount={snapshot.fuelValue} className="mt-1 text-2xl md:text-2xl" />
         </div>
         <div className="ioc-card p-5">
           <p className="text-sm text-ioc-muted">Total Fuel (KL)</p>
