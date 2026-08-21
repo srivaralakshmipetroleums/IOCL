@@ -45,7 +45,7 @@ export function DashboardPage({ view, onViewChange }: DashboardPageProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <PageTitle>Dashboard</PageTitle>
+        <PageTitle>Invoice</PageTitle>
 
         <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[360px]">
           <DashboardViewSelector value={view} onChange={onViewChange} disabled={isRefreshing} />

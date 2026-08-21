@@ -37,6 +37,8 @@ export function DashboardPeriodProvider({ children }: { children: ReactNode }) {
             key === "dashboard-line-items" ||
             key === "dashboard-monthly" ||
             key === "dashboard-analytics" ||
+            key === "business-dashboard" ||
+            key === "bank-dashboard" ||
             key === "recent-invoices" ||
             (typeof key === "string" && key.startsWith("pad-")) ||
             key === "retail-prices"

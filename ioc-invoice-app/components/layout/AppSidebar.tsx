@@ -15,14 +15,23 @@ import {
   LogOut,
   Wallet,
   Landmark,
+  LineChart,
 } from "lucide-react";
 import { IndianOilLogo } from "@/components/brand/IndianOilLogo";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
+function isNavActive(pathname: string, href: string): boolean {
+  if (href === "/invoice") {
+    return pathname === "/invoice";
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/invoice", label: "Invoice", icon: LineChart },
   { href: "/account", label: "Account", icon: Wallet },
   { href: "/bank", label: "Bank", icon: Landmark },
   { href: "/invoices", label: "Invoices", icon: FileText },
@@ -109,7 +118,7 @@ export function AppSidebar() {
         <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-2 md:p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = pathname.startsWith(item.href);
+            const active = isNavActive(pathname, item.href);
             return (
               <Link
                 key={item.href}

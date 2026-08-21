@@ -2,11 +2,12 @@ export function formatIndianNumber(value: number): string {
   return value.toLocaleString("en-IN");
 }
 
-export function formatLakhs(value: number): string {
-  return `₹${truncateToDecimals(value / 100000, 2).toFixed(2)}L`;
-}
-
+export const LAKH = 100_000;
 const CRORE = 10_000_000;
+
+export function formatLakhs(value: number): string {
+  return `₹${truncateToDecimals(value / LAKH, 2).toFixed(2)} L`;
+}
 
 /** Truncate toward zero (do not round up crore display). */
 export function truncateToDecimals(value: number, decimals: number): number {
@@ -58,7 +59,23 @@ export interface MoneyKpiDisplay {
   fullAmount?: string;
 }
 
-/** Crore headline + full INR below for KPI cards when value ≥ ₹1 Cr. */
+/**
+ * Indian money for reports: crores, then lakhs, then rupees.
+ * Never uses million/billion grouping.
+ */
+export function formatIndianCompact(value: number): string {
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  if (abs >= CRORE) {
+    return `${sign}₹${truncateToDecimals(abs / CRORE, 2).toFixed(2)} Cr`;
+  }
+  if (abs >= LAKH) {
+    return `${sign}₹${truncateToDecimals(abs / LAKH, 2).toFixed(2)} L`;
+  }
+  return `${sign}₹${formatIndianNumber(Math.round(abs))}`;
+}
+
+/** Crore/lakh headline + full INR below when the compact unit is used. */
 export function formatMoneyKpi(value: number): MoneyKpiDisplay {
   if (Math.abs(value) >= CRORE) {
     return {
@@ -66,8 +83,13 @@ export function formatMoneyKpi(value: number): MoneyKpiDisplay {
       fullAmount: formatCurrencyINR(value),
     };
   }
-  const formatted = formatCurrencyINR(value);
-  return { primary: formatted };
+  if (Math.abs(value) >= LAKH) {
+    return {
+      primary: formatIndianCompact(value),
+      fullAmount: formatCurrencyINR(value),
+    };
+  }
+  return { primary: formatCurrencyINR(value) };
 }
 
 /** Chart tooltips and PAD dashboard money labels. */

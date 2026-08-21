@@ -12,7 +12,7 @@ export function DashboardViewSelector({ value, onChange, disabled }: DashboardVi
   return (
     <div className="space-y-2">
       <label htmlFor="dashboard-view" className="text-sm font-medium text-ioc-navy">
-        Dashboard View
+        View
       </label>
       <select
         id="dashboard-view"

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatChartCrores,
   formatCrores,
+  formatIndianCompact,
   formatMoneyKpi,
   fuelSpreadPerLitre,
   roundRatePerLitre,
@@ -20,6 +21,15 @@ describe("dashboard money format", () => {
     const display = formatMoneyKpi(15_650_236);
     expect(display.primary).toBe("₹1.56 Cr");
     expect(display.fullAmount).toBe("₹1,56,50,236.00");
+  });
+
+  it("uses lakhs not millions for amounts under one crore", () => {
+    expect(formatIndianCompact(4_430_117)).toBe("₹44.30 L");
+    expect(formatIndianCompact(13_06_04_495)).toBe("₹13.06 Cr");
+    expect(formatIndianCompact(19_454)).toBe("₹19,454");
+    const display = formatMoneyKpi(4_430_117);
+    expect(display.primary).toBe("₹44.30 L");
+    expect(display.fullAmount).toBe("₹44,30,117.00");
   });
 
   it("truncates chart crore labels", () => {
