@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, Droplets, Landmark, Wallet, FileText, Scale } from "lucide-react";
 import { DashboardPeriodSelector } from "@/components/dashboard/DashboardPeriodSelector";
 import { FuelSalesReportView } from "@/components/dashboard/FuelSalesReportView";
+import { StockSnapshotForm } from "@/components/dashboard/StockSnapshotForm";
 import { MoneyKpiValue } from "@/components/dashboard/MoneyKpiValue";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -74,6 +75,8 @@ export function BusinessDashboard() {
           Failed to load dashboard: {error instanceof Error ? error.message : "Unknown error"}
         </div>
       )}
+
+      <StockSnapshotForm />
 
       {isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

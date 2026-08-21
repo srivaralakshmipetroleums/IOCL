@@ -38,8 +38,17 @@ export async function upsertStockSnapshot(
   supabase: SupabaseClient,
   input: UpsertStockSnapshotInput
 ): Promise<void> {
+  await upsertStockSnapshots(supabase, [input]);
+}
+
+export async function upsertStockSnapshots(
+  supabase: SupabaseClient,
+  inputs: UpsertStockSnapshotInput[]
+): Promise<void> {
+  if (inputs.length === 0) return;
+
   const { error } = await supabase.from("stock_snapshots").upsert(
-    {
+    inputs.map((input) => ({
       scope: input.scope,
       period_key: input.period_key,
       product: input.product,
@@ -47,7 +56,7 @@ export async function upsertStockSnapshot(
       quantity_litres: input.quantity_litres,
       effective_date: input.effective_date,
       notes: input.notes ?? null,
-    },
+    })),
     { onConflict: "scope,period_key,product,snapshot_kind" }
   );
 

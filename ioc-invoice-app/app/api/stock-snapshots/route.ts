@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getStockSnapshots, upsertStockSnapshot } from "@/lib/stock/repository";
+import { getStockSnapshots, upsertStockSnapshots } from "@/lib/stock/repository";
 import { createServiceClient } from "@/lib/supabase/server";
 
-const bodySchema = z.object({
+const snapshotSchema = z.object({
   scope: z.enum(["month", "financial_year"]),
   period_key: z.string().min(1),
   product: z.enum(["MS", "HSD"]),
@@ -13,6 +13,11 @@ const bodySchema = z.object({
   effective_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notes: z.string().optional().nullable(),
 });
+
+const bodySchema = z.union([
+  snapshotSchema,
+  z.object({ snapshots: z.array(snapshotSchema).min(1).max(8) }),
+]);
 
 export async function GET() {
   const { user, response } = await requireAuth();
@@ -28,8 +33,9 @@ export async function POST(request: NextRequest) {
   if (!user) return response!;
 
   const body = bodySchema.parse(await request.json());
+  const snapshots = "snapshots" in body ? body.snapshots : [body];
   const supabase = await createServiceClient();
-  await upsertStockSnapshot(supabase, body);
+  await upsertStockSnapshots(supabase, snapshots);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, saved: snapshots.length });
 }
