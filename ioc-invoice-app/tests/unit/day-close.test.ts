@@ -4,6 +4,7 @@ import {
   TWO_T_PACKET_PRICE_10,
   TWO_T_PACKET_PRICE_20,
 } from "@/lib/day-close/calculate";
+import { extractDescribedSuggestions } from "@/lib/day-close/suggestions";
 
 function emptyReceipts() {
   return {
@@ -93,5 +94,25 @@ describe("day close totalizer tally", () => {
     expect(result.hsd.netValue).toBe(450);
     expect(result.hsd.totalReceipts).toBe(450);
     expect(result.hsd.matched).toBe(true);
+  });
+});
+
+describe("day close described suggestions", () => {
+  it("collects unique credit and expense names from saved day closings", () => {
+    const suggestions = extractDescribedSuggestions([
+      {
+        ms_credit_rows: [{ description: "TMC", amount: 100 }],
+        hsd_credit_rows: [{ description: "tmc", amount: 50 }],
+        ms_expense_rows: [{ description: "Courier", amount: 20 }],
+        hsd_expense_rows: [{ description: "Tea", amount: 10 }],
+      },
+      {
+        ms_expense_rows: [{ description: "Courier", amount: 30 }],
+        hsd_expense_rows: [{ description: "  ", amount: 0 }],
+      },
+    ]);
+
+    expect(suggestions.credits).toEqual(["TMC"]);
+    expect(suggestions.expenses).toEqual(["Courier", "Tea"]);
   });
 });

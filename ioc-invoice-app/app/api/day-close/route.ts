@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import {
   getDayClosing,
   getRetailPriceOnDate,
+  listDayCloseDescribedSuggestions,
   listRecentDayClosingDates,
   upsertDayClosing,
 } from "@/lib/day-close/repository";
@@ -66,17 +67,19 @@ export async function GET(request: NextRequest) {
   }
   const date = parsedDate.data;
   const supabase = await createServiceClient();
-  const [closing, msRsp, hsdRsp, recentDates] = await Promise.all([
+  const [closing, msRsp, hsdRsp, recentDates, suggestions] = await Promise.all([
     getDayClosing(supabase, date),
     getRetailPriceOnDate(supabase, "MS", date),
     getRetailPriceOnDate(supabase, "HSD", date),
     listRecentDayClosingDates(supabase),
+    listDayCloseDescribedSuggestions(supabase),
   ]);
 
   return NextResponse.json({
     closing,
     rsp: { MS: msRsp, HSD: hsdRsp },
     recentDates,
+    suggestions,
   });
 }
 

@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DayCloseCashRow, DescribedAmountRow } from "@/lib/day-close/calculate";
+import {
+  extractDescribedSuggestions,
+  type DayCloseDescribedSuggestions,
+} from "@/lib/day-close/suggestions";
+
+export type { DayCloseDescribedSuggestions };
 
 export interface FuelSheetStored {
   testing: number;
@@ -204,6 +210,20 @@ export async function listRecentDayClosingDates(
 
   if (error) throw error;
   return (data ?? []).map((row) => String(row.business_date).slice(0, 10));
+}
+
+export async function listDayCloseDescribedSuggestions(
+  supabase: SupabaseClient,
+  limit = 180
+): Promise<DayCloseDescribedSuggestions> {
+  const { data, error } = await supabase
+    .from("day_closings")
+    .select("ms_credit_rows, hsd_credit_rows, ms_expense_rows, hsd_expense_rows")
+    .order("business_date", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return extractDescribedSuggestions(data ?? []);
 }
 
 export async function upsertDayClosing(

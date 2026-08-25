@@ -22,6 +22,10 @@ interface DayCloseResponse {
   closing: DayClosingRow | null;
   rsp: { MS: number | null; HSD: number | null };
   recentDates: string[];
+  suggestions: {
+    credits: string[];
+    expenses: string[];
+  };
 }
 
 type CashFormRow = { id: string; time: string; amount: string };
@@ -353,6 +357,69 @@ function CalcLine({
   );
 }
 
+function SuggestionInput({
+  value,
+  onChange,
+  suggestions,
+  placeholder,
+  readOnly,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  suggestions: string[];
+  placeholder?: string;
+  readOnly?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const query = value.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    const matches = query
+      ? suggestions.filter((item) => item.toLowerCase().includes(query))
+      : suggestions;
+    return matches.slice(0, 10);
+  }, [query, suggestions]);
+
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        readOnly={readOnly}
+        className={className}
+        placeholder={placeholder}
+        autoComplete="off"
+      />
+      {open && !readOnly && filtered.length > 0 && (
+        <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-md border border-ioc-border bg-white shadow-md">
+          {filtered.map((item) => (
+            <li key={item}>
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-left text-sm text-ioc-navy hover:bg-ioc-section"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(item);
+                  setOpen(false);
+                }}
+              >
+                {item}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function RowList<T extends { id: string }>({
   title,
   rows,
@@ -399,6 +466,8 @@ function FuelColumn({
   suggestedRsp,
   result,
   showOil2t,
+  creditSuggestions,
+  expenseSuggestions,
   readOnly = false,
 }: {
   title: string;
@@ -409,6 +478,8 @@ function FuelColumn({
   suggestedRsp: number | null;
   result: FuelSheetResult;
   showOil2t: boolean;
+  creditSuggestions: string[];
+  expenseSuggestions: string[];
   readOnly?: boolean;
 }) {
   const update = (patch: Partial<FuelFormState>) => {
@@ -763,15 +834,16 @@ function FuelColumn({
                 readOnly ? "grid-cols-[1fr_120px]" : "grid-cols-[1fr_120px_auto]"
               )}
             >
-              <Input
+              <SuggestionInput
                 value={row.description}
-                onChange={(e) =>
+                onChange={(description) =>
                   update({
                     creditRows: form.creditRows.map((item) =>
-                      item.id === row.id ? { ...item, description: e.target.value } : item
+                      item.id === row.id ? { ...item, description } : item
                     ),
                   })
                 }
+                suggestions={creditSuggestions}
                 readOnly={readOnly}
                 className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="e.g. TMC, SVM School"
@@ -828,15 +900,16 @@ function FuelColumn({
                 readOnly ? "grid-cols-[1fr_120px]" : "grid-cols-[1fr_120px_auto]"
               )}
             >
-              <Input
+              <SuggestionInput
                 value={row.description}
-                onChange={(e) =>
+                onChange={(description) =>
                   update({
                     expenseRows: form.expenseRows.map((item) =>
-                      item.id === row.id ? { ...item, description: e.target.value } : item
+                      item.id === row.id ? { ...item, description } : item
                     ),
                   })
                 }
+                suggestions={expenseSuggestions}
                 readOnly={readOnly}
                 className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="e.g. Courier"
@@ -1039,6 +1112,8 @@ export function DayCloseForm() {
   const hasSaved = Boolean(data?.closing);
   const showSummary = hasSaved && !isEditing && !isViewingDetail;
   const showDetailReadOnly = hasSaved && isViewingDetail && !isEditing;
+  const creditSuggestions = data?.suggestions?.credits ?? [];
+  const expenseSuggestions = data?.suggestions?.expenses ?? [];
 
   useEffect(() => {
     hydratedDate.current = null;
@@ -1255,6 +1330,8 @@ export function DayCloseForm() {
             suggestedRsp={data?.rsp.MS ?? null}
             result={result.ms}
             showOil2t
+            creditSuggestions={creditSuggestions}
+            expenseSuggestions={expenseSuggestions}
             readOnly={showDetailReadOnly}
           />
           <FuelColumn
@@ -1266,6 +1343,8 @@ export function DayCloseForm() {
             suggestedRsp={data?.rsp.HSD ?? null}
             result={result.hsd}
             showOil2t={false}
+            creditSuggestions={creditSuggestions}
+            expenseSuggestions={expenseSuggestions}
             readOnly={showDetailReadOnly}
           />
         </div>
