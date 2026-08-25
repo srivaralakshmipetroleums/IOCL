@@ -16,6 +16,7 @@ import {
   Wallet,
   Landmark,
   LineChart,
+  Gauge,
 } from "lucide-react";
 import { IndianOilLogo } from "@/components/brand/IndianOilLogo";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -31,6 +32,7 @@ function isNavActive(pathname: string, href: string): boolean {
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/day-close", label: "Day close", icon: Gauge },
   { href: "/invoice", label: "Invoice", icon: LineChart },
   { href: "/account", label: "Account", icon: Wallet },
   { href: "/bank", label: "Bank", icon: Landmark },
