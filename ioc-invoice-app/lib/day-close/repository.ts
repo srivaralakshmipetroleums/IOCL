@@ -3,6 +3,9 @@ import type { DayCloseCashRow, DescribedAmountRow } from "@/lib/day-close/calcul
 
 export interface FuelSheetStored {
   testing: number;
+  oil_2t_packets_10: number;
+  oil_2t_packets_20: number;
+  /** @deprecated kept in sync with oil_2t_packets_20 for older rows */
   oil_2t_packets: number;
   other_lubes_qty: number;
   other_lubes_rate: number;
@@ -83,9 +86,27 @@ function mapSheet(row: Record<string, unknown>, prefix: "ms" | "hsd"): FuelSheet
   const otherLubesQty = num(row[`${prefix}_other_lubes_qty`]);
   const otherLubesRate = num(row[`${prefix}_other_lubes_rate`]);
   const otherLubesAmount = num(row[`${prefix}_other_lubes`]);
+  const legacyPackets = Math.round(num(row[`${prefix}_oil_2t_packets`]));
+  const hasSplitCols =
+    row[`${prefix}_oil_2t_packets_10`] != null || row[`${prefix}_oil_2t_packets_20`] != null;
+
+  let packets10 = Math.round(num(row[`${prefix}_oil_2t_packets_10`]));
+  let packets20 =
+    row[`${prefix}_oil_2t_packets_20`] != null
+      ? Math.round(num(row[`${prefix}_oil_2t_packets_20`]))
+      : legacyPackets;
+
+  // Legacy encode: oil_2t_packets = packets20 + packets10 * 1_000_000
+  if (!hasSplitCols && legacyPackets >= 1_000_000) {
+    packets10 = Math.floor(legacyPackets / 1_000_000);
+    packets20 = legacyPackets % 1_000_000;
+  }
+
   return {
     testing: num(row[`${prefix}_n1_testing`]) + num(row[`${prefix}_n2_testing`]),
-    oil_2t_packets: Math.round(num(row[`${prefix}_oil_2t_packets`])),
+    oil_2t_packets_10: packets10,
+    oil_2t_packets_20: packets20,
+    oil_2t_packets: packets20,
     other_lubes_qty: otherLubesQty,
     other_lubes_rate: otherLubesRate,
     other_lubes: otherLubesAmount,
@@ -122,7 +143,9 @@ function sheetColumns(prefix: "ms" | "hsd", sheet: FuelSheetStored) {
   return {
     [`${prefix}_n1_testing`]: sheet.testing,
     [`${prefix}_n2_testing`]: 0,
-    [`${prefix}_oil_2t_packets`]: sheet.oil_2t_packets,
+    [`${prefix}_oil_2t_packets`]: sheet.oil_2t_packets_20,
+    [`${prefix}_oil_2t_packets_10`]: sheet.oil_2t_packets_10,
+    [`${prefix}_oil_2t_packets_20`]: sheet.oil_2t_packets_20,
     [`${prefix}_other_lubes_qty`]: sheet.other_lubes_qty,
     [`${prefix}_other_lubes_rate`]: sheet.other_lubes_rate,
     [`${prefix}_other_lubes`]: sheet.other_lubes,
@@ -187,25 +210,51 @@ export async function upsertDayClosing(
   supabase: SupabaseClient,
   input: UpsertDayClosingInput
 ): Promise<void> {
-  const { error } = await supabase.from("day_closings").upsert(
-    {
-      business_date: input.business_date,
-      ms_n1_start: input.ms_n1_start,
-      ms_n1_close: input.ms_n1_close,
-      ms_n2_start: input.ms_n2_start,
-      ms_n2_close: input.ms_n2_close,
-      ms_rsp: input.ms_rsp,
-      hsd_n1_start: input.hsd_n1_start,
-      hsd_n1_close: input.hsd_n1_close,
-      hsd_n2_start: input.hsd_n2_start,
-      hsd_n2_close: input.hsd_n2_close,
-      hsd_rsp: input.hsd_rsp,
-      ...sheetColumns("ms", input.ms),
-      ...sheetColumns("hsd", input.hsd),
-      notes: input.notes ?? null,
-    },
-    { onConflict: "business_date" }
-  );
+  const msCols = sheetColumns("ms", input.ms);
+  const hsdCols = sheetColumns("hsd", input.hsd);
 
-  if (error) throw error;
+  const baseRow = {
+    business_date: input.business_date,
+    ms_n1_start: input.ms_n1_start,
+    ms_n1_close: input.ms_n1_close,
+    ms_n2_start: input.ms_n2_start,
+    ms_n2_close: input.ms_n2_close,
+    ms_rsp: input.ms_rsp,
+    hsd_n1_start: input.hsd_n1_start,
+    hsd_n1_close: input.hsd_n1_close,
+    hsd_n2_start: input.hsd_n2_start,
+    hsd_n2_close: input.hsd_n2_close,
+    hsd_rsp: input.hsd_rsp,
+    ...msCols,
+    ...hsdCols,
+    notes: input.notes ?? null,
+  };
+
+  const { error } = await supabase.from("day_closings").upsert(baseRow, {
+    onConflict: "business_date",
+  });
+
+  if (!error) return;
+
+  // Older DBs may not have *_oil_2t_packets_10 / *_20 yet — fall back.
+  if (!/oil_2t_packets_1[02]/i.test(error.message)) throw error;
+
+  const {
+    ms_oil_2t_packets_10: _ms10,
+    ms_oil_2t_packets_20: _ms20,
+    hsd_oil_2t_packets_10: _hsd10,
+    hsd_oil_2t_packets_20: _hsd20,
+    ...legacyRow
+  } = baseRow as Record<string, unknown>;
+
+  // Persist both packet prices in the legacy integer until split columns exist.
+  legacyRow.ms_oil_2t_packets =
+    input.ms.oil_2t_packets_20 + input.ms.oil_2t_packets_10 * 1_000_000;
+  legacyRow.hsd_oil_2t_packets =
+    input.hsd.oil_2t_packets_20 + input.hsd.oil_2t_packets_10 * 1_000_000;
+
+  const { error: legacyError } = await supabase.from("day_closings").upsert(legacyRow, {
+    onConflict: "business_date",
+  });
+  if (legacyError) throw legacyError;
 }

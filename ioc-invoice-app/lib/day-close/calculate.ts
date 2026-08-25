@@ -1,4 +1,8 @@
-export const TWO_T_PACKET_PRICE = 10;
+export const TWO_T_PACKET_PRICE_10 = 10;
+export const TWO_T_PACKET_PRICE_20 = 20;
+
+/** @deprecated use TWO_T_PACKET_PRICE_10 / TWO_T_PACKET_PRICE_20 */
+export const TWO_T_PACKET_PRICE = TWO_T_PACKET_PRICE_20;
 
 export interface NozzleReadings {
   start: number;
@@ -22,7 +26,8 @@ export interface FuelSheetInput {
   n2: NozzleReadings;
   testingLitres: number;
   rspPerLitre: number | null;
-  oil2tPackets: number;
+  oil2tPackets10: number;
+  oil2tPackets20: number;
   otherLubesQty: number;
   otherLubesRate: number;
   cashRows: DayCloseCashRow[];
@@ -40,8 +45,10 @@ export interface FuelSheetResult {
   saleLitres: number;
   rspPerLitre: number | null;
   fuelAmount: number | null;
-  oil2tQty: number;
-  oil2tRate: number;
+  oil2tQty10: number;
+  oil2tValue10: number;
+  oil2tQty20: number;
+  oil2tValue20: number;
   oil2tValue: number;
   otherLubesQty: number;
   otherLubesRate: number;
@@ -99,8 +106,11 @@ export function computeFuelSheet(input: FuelSheetInput): FuelSheetResult {
       ? input.rspPerLitre
       : null;
   const fuelAmount = rspPerLitre != null ? roundMoney(saleLitres * rspPerLitre) : null;
-  const oil2tQty = Math.max(0, asNumber(input.oil2tPackets));
-  const oil2tValue = roundMoney(oil2tQty * TWO_T_PACKET_PRICE);
+  const oil2tQty10 = Math.max(0, asNumber(input.oil2tPackets10));
+  const oil2tValue10 = roundMoney(oil2tQty10 * TWO_T_PACKET_PRICE_10);
+  const oil2tQty20 = Math.max(0, asNumber(input.oil2tPackets20));
+  const oil2tValue20 = roundMoney(oil2tQty20 * TWO_T_PACKET_PRICE_20);
+  const oil2tValue = roundMoney(oil2tValue10 + oil2tValue20);
   const otherLubesQty = Math.max(0, asNumber(input.otherLubesQty));
   const otherLubesRate = Math.max(0, asNumber(input.otherLubesRate));
   const otherLubes = roundMoney(otherLubesQty * otherLubesRate);
@@ -125,8 +135,10 @@ export function computeFuelSheet(input: FuelSheetInput): FuelSheetResult {
     saleLitres,
     rspPerLitre,
     fuelAmount,
-    oil2tQty,
-    oil2tRate: TWO_T_PACKET_PRICE,
+    oil2tQty10,
+    oil2tValue10,
+    oil2tQty20,
+    oil2tValue20,
     oil2tValue,
     otherLubesQty,
     otherLubesRate,

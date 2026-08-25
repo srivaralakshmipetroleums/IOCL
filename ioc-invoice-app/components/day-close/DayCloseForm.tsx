@@ -11,7 +11,8 @@ import { fetchDashboardJson } from "@/lib/dashboard/fetch";
 import { formatCurrencyINR, formatIndianNumber } from "@/lib/dashboard/format";
 import {
   computeDayClose,
-  TWO_T_PACKET_PRICE,
+  TWO_T_PACKET_PRICE_10,
+  TWO_T_PACKET_PRICE_20,
   type FuelSheetResult,
 } from "@/lib/day-close/calculate";
 import type { DayClosingRow, FuelSheetStored } from "@/lib/day-close/repository";
@@ -33,7 +34,8 @@ interface FuelFormState {
   n2Close: string;
   testing: string;
   rsp: string;
-  oil2tPackets: string;
+  oil2tPackets10: string;
+  oil2tPackets20: string;
   otherLubesQty: string;
   otherLubesRate: string;
   cashRows: CashFormRow[];
@@ -80,7 +82,8 @@ function emptyFuelForm(rsp = ""): FuelFormState {
     n2Close: "",
     testing: "",
     rsp,
-    oil2tPackets: "",
+    oil2tPackets10: "",
+    oil2tPackets20: "",
     otherLubesQty: "",
     otherLubesRate: "",
     cashRows: [newCashRow()],
@@ -148,7 +151,8 @@ function formFromStored(
     n2Close: n2Close ? String(n2Close) : "",
     testing: sheet.testing ? String(sheet.testing) : "",
     rsp: rsp != null ? String(rsp) : suggestedRsp != null ? String(suggestedRsp) : "",
-    oil2tPackets: sheet.oil_2t_packets ? String(sheet.oil_2t_packets) : "",
+    oil2tPackets10: sheet.oil_2t_packets_10 ? String(sheet.oil_2t_packets_10) : "",
+    oil2tPackets20: sheet.oil_2t_packets_20 ? String(sheet.oil_2t_packets_20) : "",
     otherLubesQty: sheet.other_lubes_qty ? String(sheet.other_lubes_qty) : "",
     otherLubesRate: sheet.other_lubes_rate ? String(sheet.other_lubes_rate) : "",
     cashRows,
@@ -160,12 +164,17 @@ function formFromStored(
   };
 }
 
-function sheetPayload(form: FuelFormState): FuelSheetStored {
+function sheetPayload(form: FuelFormState, options?: { includeOil2t?: boolean }): FuelSheetStored {
+  const includeOil2t = options?.includeOil2t !== false;
   const otherLubesQty = parseQty(form.otherLubesQty);
   const otherLubesRate = parseQty(form.otherLubesRate);
+  const oil2t10 = includeOil2t ? Math.round(parseQty(form.oil2tPackets10)) : 0;
+  const oil2t20 = includeOil2t ? Math.round(parseQty(form.oil2tPackets20)) : 0;
   return {
     testing: parseQty(form.testing),
-    oil_2t_packets: Math.round(parseQty(form.oil2tPackets)),
+    oil_2t_packets_10: oil2t10,
+    oil_2t_packets_20: oil2t20,
+    oil_2t_packets: oil2t20,
     other_lubes_qty: otherLubesQty,
     other_lubes_rate: otherLubesRate,
     other_lubes: Math.round(otherLubesQty * otherLubesRate * 100) / 100,
@@ -190,14 +199,15 @@ function sheetPayload(form: FuelFormState): FuelSheetStored {
   };
 }
 
-function toComputeInput(form: FuelFormState) {
-  const sheet = sheetPayload(form);
+function toComputeInput(form: FuelFormState, options?: { includeOil2t?: boolean }) {
+  const sheet = sheetPayload(form, options);
   return {
     n1: { start: parseQty(form.n1Start), close: parseQty(form.n1Close) },
     n2: { start: parseQty(form.n2Start), close: parseQty(form.n2Close) },
     testingLitres: sheet.testing,
     rspPerLitre: parseRsp(form.rsp),
-    oil2tPackets: sheet.oil_2t_packets,
+    oil2tPackets10: sheet.oil_2t_packets_10,
+    oil2tPackets20: sheet.oil_2t_packets_20,
     otherLubesQty: sheet.other_lubes_qty,
     otherLubesRate: sheet.other_lubes_rate,
     cashRows: sheet.cash_rows,
@@ -261,11 +271,13 @@ function ReadingBox({
   value,
   onChange,
   theme,
+  readOnly,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   theme: FuelTheme;
+  readOnly?: boolean;
 }) {
   return (
     <div className={cn("min-w-0 flex-1 border bg-white", theme.panelBorder)}>
@@ -283,9 +295,11 @@ function ReadingBox({
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        readOnly={readOnly}
         className={cn(
           "h-11 rounded-none border-0 text-center text-sm tabular-nums focus-visible:ring-1",
-          theme.focusRing
+          theme.focusRing,
+          readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0"
         )}
         placeholder="0"
       />
@@ -301,6 +315,7 @@ function CalcLine({
   placeholder,
   theme,
   emphasize,
+  readOnly,
 }: {
   label: string;
   value: string;
@@ -309,11 +324,13 @@ function CalcLine({
   placeholder?: string;
   theme: FuelTheme;
   emphasize?: boolean;
+  readOnly?: boolean;
 }) {
+  const canEdit = Boolean(editable) && !readOnly;
   return (
     <div className={cn("flex items-center gap-2 border-b py-2 text-sm", theme.panelBorder)}>
       <span className={cn("min-w-0 flex-1 font-medium", theme.sectionTitle)}>{label}</span>
-      {editable ? (
+      {canEdit ? (
         <Input
           inputMode="decimal"
           value={value}
@@ -329,7 +346,7 @@ function CalcLine({
             theme.value
           )}
         >
-          {value}
+          {value || "—"}
         </span>
       )}
     </div>
@@ -342,6 +359,7 @@ function RowList<T extends { id: string }>({
   onAdd,
   onRemove,
   addLabel,
+  readOnly,
   children,
 }: {
   title: string;
@@ -349,16 +367,19 @@ function RowList<T extends { id: string }>({
   onAdd: () => void;
   onRemove: (id: string) => void;
   addLabel: string;
+  readOnly?: boolean;
   children: (row: T, index: number, remove: () => void) => React.ReactNode;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-ioc-muted">{title}</p>
-        <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-          <Plus className="h-3.5 w-3.5" />
-          {addLabel}
-        </Button>
+        {!readOnly && (
+          <Button type="button" variant="outline" size="sm" onClick={onAdd}>
+            <Plus className="h-3.5 w-3.5" />
+            {addLabel}
+          </Button>
+        )}
       </div>
       <div className="space-y-2">
         {rows.map((row, index) => (
@@ -377,6 +398,8 @@ function FuelColumn({
   setForm,
   suggestedRsp,
   result,
+  showOil2t,
+  readOnly = false,
 }: {
   title: string;
   theme: FuelTheme;
@@ -385,8 +408,13 @@ function FuelColumn({
   setForm: (next: FuelFormState | ((current: FuelFormState) => FuelFormState)) => void;
   suggestedRsp: number | null;
   result: FuelSheetResult;
+  showOil2t: boolean;
+  readOnly?: boolean;
 }) {
-  const update = (patch: Partial<FuelFormState>) => setForm((current) => ({ ...current, ...patch }));
+  const update = (patch: Partial<FuelFormState>) => {
+    if (readOnly) return;
+    setForm((current) => ({ ...current, ...patch }));
+  };
 
   return (
     <div className={cn("space-y-4 overflow-hidden rounded-[12px] border shadow-sm", theme.card, theme.border)}>
@@ -408,12 +436,14 @@ function FuelColumn({
             value={form.n1Start}
             onChange={(v) => update({ n1Start: v })}
             theme={theme}
+            readOnly={readOnly}
           />
           <ReadingBox
             label="Closing reading (Ltr.)"
             value={form.n1Close}
             onChange={(v) => update({ n1Close: v })}
             theme={theme}
+            readOnly={readOnly}
           />
         </div>
         <CalcLine
@@ -434,12 +464,14 @@ function FuelColumn({
             value={form.n2Start}
             onChange={(v) => update({ n2Start: v })}
             theme={theme}
+            readOnly={readOnly}
           />
           <ReadingBox
             label="Closing reading (Ltr.)"
             value={form.n2Close}
             onChange={(v) => update({ n2Close: v })}
             theme={theme}
+            readOnly={readOnly}
           />
         </div>
         <CalcLine
@@ -463,6 +495,7 @@ function FuelColumn({
           onChange={(v) => update({ testing: v })}
           placeholder="0"
           theme={theme}
+          readOnly={readOnly}
         />
         <CalcLine
           label="Sale litres after testing ="
@@ -477,6 +510,7 @@ function FuelColumn({
           onChange={(v) => update({ rsp: v })}
           placeholder={suggestedRsp != null ? String(suggestedRsp) : "0.00"}
           theme={theme}
+          readOnly={readOnly}
         />
         {suggestedRsp != null && (
           <p className="pb-1 text-right text-[11px] text-ioc-muted">
@@ -514,26 +548,60 @@ function FuelColumn({
               </tr>
             </thead>
             <tbody>
-              <tr className={cn("border-b", theme.panelBorder)}>
-                <td className={cn("px-2 py-2", theme.sectionTitle)}>
-                  2T oil packets (₹{TWO_T_PACKET_PRICE} each)
-                </td>
-                <td className="px-2 py-1.5">
-                  <Input
-                    inputMode="numeric"
-                    value={form.oil2tPackets}
-                    onChange={(e) => update({ oil2tPackets: e.target.value })}
-                    className={cn("h-8 text-right tabular-nums", theme.focusRing)}
-                    placeholder="0"
-                  />
-                </td>
-                <td className="px-2 py-2 text-right tabular-nums text-ioc-muted">
-                  {TWO_T_PACKET_PRICE.toFixed(2)}
-                </td>
-                <td className={cn("px-2 py-2 text-right font-medium tabular-nums", theme.value)}>
-                  {money(result.oil2tValue)}
-                </td>
-              </tr>
+              {showOil2t && (
+                <>
+                  <tr className={cn("border-b", theme.panelBorder)}>
+                    <td className={cn("px-2 py-2", theme.sectionTitle)}>
+                      2T oil packets (₹{TWO_T_PACKET_PRICE_10} each)
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Input
+                        inputMode="numeric"
+                        value={form.oil2tPackets10}
+                        onChange={(e) => update({ oil2tPackets10: e.target.value })}
+                        readOnly={readOnly}
+                        className={cn(
+                          "h-8 text-right tabular-nums",
+                          theme.focusRing,
+                          readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0"
+                        )}
+                        placeholder="0"
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums text-ioc-muted">
+                      {TWO_T_PACKET_PRICE_10.toFixed(2)}
+                    </td>
+                    <td className={cn("px-2 py-2 text-right font-medium tabular-nums", theme.value)}>
+                      {money(result.oil2tValue10)}
+                    </td>
+                  </tr>
+                  <tr className={cn("border-b", theme.panelBorder)}>
+                    <td className={cn("px-2 py-2", theme.sectionTitle)}>
+                      2T oil packets (₹{TWO_T_PACKET_PRICE_20} each)
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Input
+                        inputMode="numeric"
+                        value={form.oil2tPackets20}
+                        onChange={(e) => update({ oil2tPackets20: e.target.value })}
+                        readOnly={readOnly}
+                        className={cn(
+                          "h-8 text-right tabular-nums",
+                          theme.focusRing,
+                          readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0"
+                        )}
+                        placeholder="0"
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums text-ioc-muted">
+                      {TWO_T_PACKET_PRICE_20.toFixed(2)}
+                    </td>
+                    <td className={cn("px-2 py-2 text-right font-medium tabular-nums", theme.value)}>
+                      {money(result.oil2tValue20)}
+                    </td>
+                  </tr>
+                </>
+              )}
               <tr className={cn("border-b", theme.panelBorder)}>
                 <td className={cn("px-2 py-2", theme.sectionTitle)}>Other lubes / products</td>
                 <td className="px-2 py-1.5">
@@ -541,7 +609,12 @@ function FuelColumn({
                     inputMode="decimal"
                     value={form.otherLubesQty}
                     onChange={(e) => update({ otherLubesQty: e.target.value })}
-                    className={cn("h-8 text-right tabular-nums", theme.focusRing)}
+                    readOnly={readOnly}
+                    className={cn(
+                      "h-8 text-right tabular-nums",
+                      theme.focusRing,
+                      readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0"
+                    )}
                     placeholder="0"
                   />
                 </td>
@@ -550,7 +623,12 @@ function FuelColumn({
                     inputMode="decimal"
                     value={form.otherLubesRate}
                     onChange={(e) => update({ otherLubesRate: e.target.value })}
-                    className={cn("h-8 text-right tabular-nums", theme.focusRing)}
+                    readOnly={readOnly}
+                    className={cn(
+                      "h-8 text-right tabular-nums",
+                      theme.focusRing,
+                      readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0"
+                    )}
                     placeholder="0"
                   />
                 </td>
@@ -576,6 +654,7 @@ function FuelColumn({
           title="Cash collected"
           rows={form.cashRows}
           addLabel="Add row"
+          readOnly={readOnly}
           onAdd={() => update({ cashRows: [...form.cashRows, newCashRow()] })}
           onRemove={(id) =>
             update({
@@ -587,7 +666,12 @@ function FuelColumn({
           }
         >
           {(row, _index, remove) => (
-            <div className="grid grid-cols-[1fr_120px_auto] gap-2">
+            <div
+              className={cn(
+                "grid gap-2",
+                readOnly ? "grid-cols-[1fr_120px]" : "grid-cols-[1fr_120px_auto]"
+              )}
+            >
               <Input
                 value={row.time}
                 onChange={(e) =>
@@ -597,6 +681,8 @@ function FuelColumn({
                     ),
                   })
                 }
+                readOnly={readOnly}
+                className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="Time"
               />
               <Input
@@ -609,18 +695,22 @@ function FuelColumn({
                     ),
                   })
                 }
+                readOnly={readOnly}
+                className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="₹"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={form.cashRows.length === 1}
-                onClick={remove}
-                aria-label="Remove cash row"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={form.cashRows.length === 1}
+                  onClick={remove}
+                  aria-label="Remove cash row"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </RowList>
@@ -633,6 +723,8 @@ function FuelColumn({
               inputMode="decimal"
               value={form.phonePePaytm}
               onChange={(e) => update({ phonePePaytm: e.target.value })}
+              readOnly={readOnly}
+              className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
               placeholder="0"
             />
           </div>
@@ -642,6 +734,8 @@ function FuelColumn({
               inputMode="decimal"
               value={form.posCards}
               onChange={(e) => update({ posCards: e.target.value })}
+              readOnly={readOnly}
+              className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
               placeholder="0"
             />
           </div>
@@ -651,6 +745,7 @@ function FuelColumn({
           title="Credits"
           rows={form.creditRows}
           addLabel="Add credit"
+          readOnly={readOnly}
           onAdd={() => update({ creditRows: [...form.creditRows, newDescribedRow()] })}
           onRemove={(id) =>
             update({
@@ -662,7 +757,12 @@ function FuelColumn({
           }
         >
           {(row, _index, remove) => (
-            <div className="grid grid-cols-[1fr_120px_auto] gap-2">
+            <div
+              className={cn(
+                "grid gap-2",
+                readOnly ? "grid-cols-[1fr_120px]" : "grid-cols-[1fr_120px_auto]"
+              )}
+            >
               <Input
                 value={row.description}
                 onChange={(e) =>
@@ -672,6 +772,8 @@ function FuelColumn({
                     ),
                   })
                 }
+                readOnly={readOnly}
+                className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="e.g. TMC, SVM School"
               />
               <Input
@@ -684,18 +786,22 @@ function FuelColumn({
                     ),
                   })
                 }
+                readOnly={readOnly}
+                className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="₹"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={form.creditRows.length === 1}
-                onClick={remove}
-                aria-label="Remove credit"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={form.creditRows.length === 1}
+                  onClick={remove}
+                  aria-label="Remove credit"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </RowList>
@@ -704,6 +810,7 @@ function FuelColumn({
           title="Expenses paid (from cash)"
           rows={form.expenseRows}
           addLabel="Add expense"
+          readOnly={readOnly}
           onAdd={() => update({ expenseRows: [...form.expenseRows, newDescribedRow()] })}
           onRemove={(id) =>
             update({
@@ -715,7 +822,12 @@ function FuelColumn({
           }
         >
           {(row, _index, remove) => (
-            <div className="grid grid-cols-[1fr_120px_auto] gap-2">
+            <div
+              className={cn(
+                "grid gap-2",
+                readOnly ? "grid-cols-[1fr_120px]" : "grid-cols-[1fr_120px_auto]"
+              )}
+            >
               <Input
                 value={row.description}
                 onChange={(e) =>
@@ -725,6 +837,8 @@ function FuelColumn({
                     ),
                   })
                 }
+                readOnly={readOnly}
+                className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="e.g. Courier"
               />
               <Input
@@ -737,18 +851,22 @@ function FuelColumn({
                     ),
                   })
                 }
+                readOnly={readOnly}
+                className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
                 placeholder="₹"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={form.expenseRows.length === 1}
-                onClick={remove}
-                aria-label="Remove expense"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={form.expenseRows.length === 1}
+                  onClick={remove}
+                  aria-label="Remove expense"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </RowList>
@@ -785,6 +903,8 @@ function FuelColumn({
         <Input
           value={form.pumpBoy}
           onChange={(e) => update({ pumpBoy: e.target.value })}
+          readOnly={readOnly}
+          className={cn(readOnly && "cursor-default bg-ioc-section/40 focus-visible:ring-0")}
           placeholder="Name"
         />
       </div>
@@ -807,11 +927,13 @@ function FuelMiniSummary({
   theme,
   result,
   pumpBoy,
+  showOil2t,
 }: {
   title: string;
   theme: FuelTheme;
   result: FuelSheetResult;
   pumpBoy: string;
+  showOil2t: boolean;
 }) {
   return (
     <div className={cn("overflow-hidden rounded-[12px] border shadow-sm", theme.card, theme.border)}>
@@ -834,7 +956,19 @@ function FuelMiniSummary({
             }
           />
           <MiniRow label="Fuel amount" value={money(result.fuelAmount)} />
-          <MiniRow label="Lubes" value={money(result.lubesTotal)} />
+          {showOil2t && (
+            <>
+              <MiniRow
+                label={`2T oil packets (₹${TWO_T_PACKET_PRICE_10})`}
+                value={money(result.oil2tValue10)}
+              />
+              <MiniRow
+                label={`2T oil packets (₹${TWO_T_PACKET_PRICE_20})`}
+                value={money(result.oil2tValue20)}
+              />
+            </>
+          )}
+          <MiniRow label="Other lubes / products" value={money(result.otherLubes)} />
           <div className={cn("rounded-[6px] px-3 py-2", theme.netBar)}>
             <div className="flex items-center justify-between gap-2 text-sm font-semibold">
               <span>Total amount (fuel + lubes)</span>
@@ -893,6 +1027,7 @@ export function DayCloseForm() {
   const [hsd, setHsd] = useState<FuelFormState>(() => emptyFuelForm());
   const [message, setMessage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isViewingDetail, setIsViewingDetail] = useState(false);
   const [confirmEdit, setConfirmEdit] = useState(false);
   const hydratedDate = useRef<string | null>(null);
 
@@ -902,7 +1037,8 @@ export function DayCloseForm() {
   });
 
   const hasSaved = Boolean(data?.closing);
-  const showSummary = hasSaved && !isEditing;
+  const showSummary = hasSaved && !isEditing && !isViewingDetail;
+  const showDetailReadOnly = hasSaved && isViewingDetail && !isEditing;
 
   useEffect(() => {
     hydratedDate.current = null;
@@ -910,6 +1046,7 @@ export function DayCloseForm() {
     setHsd(emptyFuelForm());
     setMessage(null);
     setIsEditing(false);
+    setIsViewingDetail(false);
     setConfirmEdit(false);
   }, [date]);
 
@@ -942,6 +1079,7 @@ export function DayCloseForm() {
         )
       );
       setIsEditing(false);
+      setIsViewingDetail(false);
       setConfirmEdit(false);
       return;
     }
@@ -949,14 +1087,15 @@ export function DayCloseForm() {
     setMs(emptyFuelForm(data.rsp.MS != null ? String(data.rsp.MS) : ""));
     setHsd(emptyFuelForm(data.rsp.HSD != null ? String(data.rsp.HSD) : ""));
     setIsEditing(true);
+    setIsViewingDetail(false);
     setConfirmEdit(false);
   }, [data, date]);
 
   const result = useMemo(
     () =>
       computeDayClose({
-        ms: toComputeInput(ms),
-        hsd: toComputeInput(hsd),
+        ms: toComputeInput(ms, { includeOil2t: true }),
+        hsd: toComputeInput(hsd, { includeOil2t: false }),
       }),
     [ms, hsd]
   );
@@ -978,8 +1117,8 @@ export function DayCloseForm() {
           hsd_n2_start: parseQty(hsd.n2Start),
           hsd_n2_close: parseQty(hsd.n2Close),
           hsd_rsp: parseRsp(hsd.rsp),
-          ms: sheetPayload(ms),
-          hsd: sheetPayload(hsd),
+          ms: sheetPayload(ms, { includeOil2t: true }),
+          hsd: sheetPayload(hsd, { includeOil2t: false }),
         }),
       });
       if (!res.ok) {
@@ -991,11 +1130,17 @@ export function DayCloseForm() {
       hydratedDate.current = null;
       queryClient.invalidateQueries({ queryKey: ["day-close"] });
       setIsEditing(false);
+      setIsViewingDetail(false);
       setConfirmEdit(false);
       setMessage("Day account saved.");
     },
     onError: (err: Error) => setMessage(err.message),
   });
+
+  function backToSummary() {
+    cancelEdit();
+    setIsViewingDetail(false);
+  }
 
   function cancelEdit() {
     const closing = data?.closing;
@@ -1060,6 +1205,13 @@ export function DayCloseForm() {
         </div>
       )}
 
+      {showDetailReadOnly && (
+        <div className="rounded-lg border border-ioc-navy/20 bg-ioc-section px-4 py-3 text-sm text-ioc-navy">
+          Viewing the full day account in read-only mode. Nothing can be changed here. Go back to
+          the summary, then use Change day account if you need to edit.
+        </div>
+      )}
+
       {isEditing && hasSaved && (
         <div className="rounded-lg border border-ioc-orange/40 bg-ioc-orange-light px-4 py-3 text-sm text-ioc-navy">
           <p className="font-medium">You are editing a saved day account.</p>
@@ -1082,12 +1234,14 @@ export function DayCloseForm() {
             theme={MS_THEME}
             result={result.ms}
             pumpBoy={ms.pumpBoy}
+            showOil2t
           />
           <FuelMiniSummary
             title="HSD (Diesel)"
             theme={HSD_THEME}
             result={result.hsd}
             pumpBoy={hsd.pumpBoy}
+            showOil2t={false}
           />
         </div>
       ) : (
@@ -1100,6 +1254,8 @@ export function DayCloseForm() {
             setForm={setMs}
             suggestedRsp={data?.rsp.MS ?? null}
             result={result.ms}
+            showOil2t
+            readOnly={showDetailReadOnly}
           />
           <FuelColumn
             title="HSD (Diesel)"
@@ -1109,6 +1265,8 @@ export function DayCloseForm() {
             setForm={setHsd}
             suggestedRsp={data?.rsp.HSD ?? null}
             result={result.hsd}
+            showOil2t={false}
+            readOnly={showDetailReadOnly}
           />
         </div>
       )}
@@ -1143,17 +1301,33 @@ export function DayCloseForm() {
               </p>
             </>
           ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setConfirmEdit(true);
-                setMessage(null);
-              }}
-            >
-              Change day account
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setConfirmEdit(true);
+                  setMessage(null);
+                }}
+              >
+                Change day account
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsViewingDetail(true);
+                  setMessage(null);
+                }}
+              >
+                Show detailed form
+              </Button>
+            </>
           )
+        ) : showDetailReadOnly ? (
+          <Button type="button" variant="outline" onClick={backToSummary}>
+            Back to summary
+          </Button>
         ) : (
           <>
             <Button

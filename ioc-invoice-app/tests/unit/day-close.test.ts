@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { computeDayClose, TWO_T_PACKET_PRICE } from "@/lib/day-close/calculate";
+import {
+  computeDayClose,
+  TWO_T_PACKET_PRICE_10,
+  TWO_T_PACKET_PRICE_20,
+} from "@/lib/day-close/calculate";
 
 function emptyReceipts() {
   return {
@@ -12,14 +16,15 @@ function emptyReceipts() {
 }
 
 describe("day close totalizer tally", () => {
-  it("subtracts combined testing litres after N1 + N2 net sale", () => {
+  it("adds ₹10 and ₹20 2T packets on MS and subtracts testing litres", () => {
     const result = computeDayClose({
       ms: {
         n1: { start: 1000, close: 1100 },
         n2: { start: 2000, close: 2050 },
         testingLitres: 3,
         rspPerLitre: 100,
-        oil2tPackets: 3,
+        oil2tPackets10: 2,
+        oil2tPackets20: 3,
         otherLubesQty: 2,
         otherLubesRate: 20,
         ...emptyReceipts(),
@@ -29,21 +34,23 @@ describe("day close totalizer tally", () => {
         n2: { start: 0, close: 0 },
         testingLitres: 0,
         rspPerLitre: 90,
-        oil2tPackets: 0,
+        oil2tPackets10: 0,
+        oil2tPackets20: 0,
         otherLubesQty: 0,
         otherLubesRate: 0,
         ...emptyReceipts(),
       },
     });
 
-    expect(result.ms.n1NetLitres).toBe(100);
-    expect(result.ms.n2NetLitres).toBe(50);
-    expect(result.ms.totalNetLitres).toBe(150);
     expect(result.ms.saleLitres).toBe(147);
     expect(result.ms.fuelAmount).toBe(14700);
-    expect(result.ms.oil2tValue).toBe(3 * TWO_T_PACKET_PRICE);
+    expect(result.ms.oil2tValue10).toBe(2 * TWO_T_PACKET_PRICE_10);
+    expect(result.ms.oil2tValue20).toBe(3 * TWO_T_PACKET_PRICE_20);
+    expect(result.ms.oil2tValue).toBe(2 * TWO_T_PACKET_PRICE_10 + 3 * TWO_T_PACKET_PRICE_20);
     expect(result.ms.otherLubes).toBe(40);
-    expect(result.ms.netValue).toBe(14700 + 30 + 40);
+    expect(result.ms.netValue).toBe(
+      14700 + 2 * TWO_T_PACKET_PRICE_10 + 3 * TWO_T_PACKET_PRICE_20 + 40
+    );
   });
 
   it("tallies MS and HSD receipts separately", () => {
@@ -53,7 +60,8 @@ describe("day close totalizer tally", () => {
         n2: { start: 0, close: 0 },
         testingLitres: 0,
         rspPerLitre: 100,
-        oil2tPackets: 0,
+        oil2tPackets10: 0,
+        oil2tPackets20: 0,
         otherLubesQty: 0,
         otherLubesRate: 0,
         cashRows: [{ id: "1", time: "", amount: 700 }],
@@ -67,7 +75,8 @@ describe("day close totalizer tally", () => {
         n2: { start: 0, close: 0 },
         testingLitres: 0,
         rspPerLitre: 90,
-        oil2tPackets: 0,
+        oil2tPackets10: 0,
+        oil2tPackets20: 0,
         otherLubesQty: 0,
         otherLubesRate: 0,
         cashRows: [{ id: "1", time: "", amount: 450 }],

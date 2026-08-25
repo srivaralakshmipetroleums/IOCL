@@ -25,7 +25,9 @@ const describedRowSchema = z.object({
 
 const sheetSchema = z.object({
   testing: z.number().nonnegative(),
-  oil_2t_packets: z.number().int().nonnegative(),
+  oil_2t_packets_10: z.number().int().nonnegative(),
+  oil_2t_packets_20: z.number().int().nonnegative(),
+  oil_2t_packets: z.number().int().nonnegative().optional(),
   other_lubes_qty: z.number().nonnegative(),
   other_lubes_rate: z.number().nonnegative(),
   other_lubes: z.number().nonnegative(),
@@ -84,6 +86,16 @@ export async function POST(request: NextRequest) {
 
   const body = bodySchema.parse(await request.json());
   const supabase = await createServiceClient();
-  await upsertDayClosing(supabase, body);
+  await upsertDayClosing(supabase, {
+    ...body,
+    ms: {
+      ...body.ms,
+      oil_2t_packets: body.ms.oil_2t_packets_20,
+    },
+    hsd: {
+      ...body.hsd,
+      oil_2t_packets: body.hsd.oil_2t_packets_20,
+    },
+  });
   return NextResponse.json({ ok: true });
 }
