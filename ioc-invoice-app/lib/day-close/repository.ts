@@ -226,6 +226,22 @@ export async function listDayCloseDescribedSuggestions(
   return extractDescribedSuggestions(data ?? []);
 }
 
+export async function listDayClosingsInRange(
+  supabase: SupabaseClient,
+  dateFrom: string,
+  dateTo: string
+): Promise<DayClosingRow[]> {
+  const { data, error } = await supabase
+    .from("day_closings")
+    .select("*")
+    .gte("business_date", dateFrom)
+    .lte("business_date", dateTo)
+    .order("business_date", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => mapRow(row as Record<string, unknown>));
+}
+
 export async function upsertDayClosing(
   supabase: SupabaseClient,
   input: UpsertDayClosingInput

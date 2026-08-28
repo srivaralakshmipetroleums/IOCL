@@ -8,6 +8,7 @@ import { PadKpiCards } from "@/components/dashboard/pad/PadKpiCards";
 import { PadLedgerTable, type PadLedgerRow } from "@/components/dashboard/pad/PadLedgerTable";
 import { PadReconciliationTable } from "@/components/dashboard/pad/PadReconciliationTable";
 import { RetailPriceManager } from "@/components/dashboard/pad/RetailPriceManager";
+import { RspMarginWatch } from "@/components/dashboard/pad/RspMarginWatch";
 import { SectionTitle } from "@/components/dashboard/DashboardParts";
 import { DashboardPeriodSelector } from "@/components/dashboard/DashboardPeriodSelector";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
@@ -177,6 +178,9 @@ export function PadAccountDashboard() {
         summary={reconciliationData?.summary}
         isLoading={reconLoading}
       />
+
+      <SectionTitle>RSP margin watch</SectionTitle>
+      <RspMarginWatch />
 
       <SectionTitle>Retail Prices</SectionTitle>
       <RetailPriceManager />

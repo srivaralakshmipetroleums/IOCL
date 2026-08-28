@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { PadAccountReportSection } from "@/components/reports/PadAccountReportSection";
 import { BankAccountReportSection } from "@/components/reports/BankAccountReportSection";
+import { OwnerPackReportSection } from "@/components/reports/OwnerPackReportSection";
 import { triggerBrowserDownload } from "@/lib/download-file";
 import { Download } from "lucide-react";
 
@@ -53,9 +54,12 @@ export function ReportsPage() {
       <div>
         <PageTitle>Reports</PageTitle>
         <p className="mt-2 text-sm text-ioc-muted">
-          Invoice Excel export, PAD / Accounts statements, and Bank statement workbook
+          Invoice Excel export, monthly owner pack, PAD / Accounts statements, and Bank statement
+          workbook
         </p>
       </div>
+
+      <OwnerPackReportSection />
 
       <Card>
         <CardHeader>

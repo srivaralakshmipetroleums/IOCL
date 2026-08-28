@@ -1102,6 +1102,7 @@ export function DayCloseForm() {
   const [isEditing, setIsEditing] = useState(false);
   const [isViewingDetail, setIsViewingDetail] = useState(false);
   const [confirmEdit, setConfirmEdit] = useState(false);
+  const [mobileFuelTab, setMobileFuelTab] = useState<"MS" | "HSD">("MS");
   const hydratedDate = useRef<string | null>(null);
 
   const { data, isLoading, isError, error } = useQuery<DayCloseResponse>({
@@ -1123,6 +1124,7 @@ export function DayCloseForm() {
     setIsEditing(false);
     setIsViewingDetail(false);
     setConfirmEdit(false);
+    setMobileFuelTab("MS");
   }, [date]);
 
   useEffect(() => {
@@ -1251,8 +1253,11 @@ export function DayCloseForm() {
     setMessage(null);
   }
 
+  const showFormActions = !showSummary && !showDetailReadOnly;
+  const showMobileSaveBar = showFormActions;
+
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", showMobileSaveBar && "pb-24 lg:pb-0")}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <PageTitle>Daily totalizer readings &amp; sale summary</PageTitle>
@@ -1320,41 +1325,94 @@ export function DayCloseForm() {
           />
         </div>
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          <FuelColumn
-            title="MS (Petrol)"
-            theme={MS_THEME}
-            tallyLabel="Tally summary (MS)"
-            form={ms}
-            setForm={setMs}
-            suggestedRsp={data?.rsp.MS ?? null}
-            result={result.ms}
-            showOil2t
-            creditSuggestions={creditSuggestions}
-            expenseSuggestions={expenseSuggestions}
-            readOnly={showDetailReadOnly}
-          />
-          <FuelColumn
-            title="HSD (Diesel)"
-            theme={HSD_THEME}
-            tallyLabel="Tally summary (HSD)"
-            form={hsd}
-            setForm={setHsd}
-            suggestedRsp={data?.rsp.HSD ?? null}
-            result={result.hsd}
-            showOil2t={false}
-            creditSuggestions={creditSuggestions}
-            expenseSuggestions={expenseSuggestions}
-            readOnly={showDetailReadOnly}
-          />
-        </div>
+        <>
+          <div className="flex gap-2 lg:hidden">
+            <Button
+              type="button"
+              className="flex-1"
+              variant={mobileFuelTab === "MS" ? "default" : "outline"}
+              onClick={() => setMobileFuelTab("MS")}
+            >
+              MS (Petrol)
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              variant={mobileFuelTab === "HSD" ? "default" : "outline"}
+              onClick={() => setMobileFuelTab("HSD")}
+            >
+              HSD (Diesel)
+            </Button>
+          </div>
+
+          <div className="hidden items-start gap-4 lg:grid lg:grid-cols-2">
+            <FuelColumn
+              title="MS (Petrol)"
+              theme={MS_THEME}
+              tallyLabel="Tally summary (MS)"
+              form={ms}
+              setForm={setMs}
+              suggestedRsp={data?.rsp.MS ?? null}
+              result={result.ms}
+              showOil2t
+              creditSuggestions={creditSuggestions}
+              expenseSuggestions={expenseSuggestions}
+              readOnly={showDetailReadOnly}
+            />
+            <FuelColumn
+              title="HSD (Diesel)"
+              theme={HSD_THEME}
+              tallyLabel="Tally summary (HSD)"
+              form={hsd}
+              setForm={setHsd}
+              suggestedRsp={data?.rsp.HSD ?? null}
+              result={result.hsd}
+              showOil2t={false}
+              creditSuggestions={creditSuggestions}
+              expenseSuggestions={expenseSuggestions}
+              readOnly={showDetailReadOnly}
+            />
+          </div>
+
+          <div className="lg:hidden">
+            {mobileFuelTab === "MS" ? (
+              <FuelColumn
+                title="MS (Petrol)"
+                theme={MS_THEME}
+                tallyLabel="Tally summary (MS)"
+                form={ms}
+                setForm={setMs}
+                suggestedRsp={data?.rsp.MS ?? null}
+                result={result.ms}
+                showOil2t
+                creditSuggestions={creditSuggestions}
+                expenseSuggestions={expenseSuggestions}
+                readOnly={showDetailReadOnly}
+              />
+            ) : (
+              <FuelColumn
+                title="HSD (Diesel)"
+                theme={HSD_THEME}
+                tallyLabel="Tally summary (HSD)"
+                form={hsd}
+                setForm={setHsd}
+                suggestedRsp={data?.rsp.HSD ?? null}
+                result={result.hsd}
+                showOil2t={false}
+                creditSuggestions={creditSuggestions}
+                expenseSuggestions={expenseSuggestions}
+                readOnly={showDetailReadOnly}
+              />
+            )}
+          </div>
+        </>
       )}
 
       {data?.recentDates?.length ? (
         <p className="text-xs text-ioc-muted">Saved dates: {data.recentDates.join(", ")}</p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className={cn("flex flex-wrap items-center gap-3", showMobileSaveBar && "hidden lg:flex")}>
         {showSummary ? (
           confirmEdit ? (
             <>
@@ -1432,6 +1490,39 @@ export function DayCloseForm() {
         )}
         {message && <p className="text-sm text-ioc-muted">{message}</p>}
       </div>
+
+      {showFormActions && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ioc-border bg-white/95 p-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-lg items-center gap-2">
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={() => {
+                setMessage(null);
+                saveMutation.mutate();
+              }}
+              disabled={saveMutation.isPending || isLoading}
+            >
+              {saveMutation.isPending
+                ? "Saving..."
+                : hasSaved
+                  ? "Save changes"
+                  : "Save day account"}
+            </Button>
+            {hasSaved && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancelEdit}
+                disabled={saveMutation.isPending}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+          {message && <p className="mt-2 text-center text-xs text-ioc-muted">{message}</p>}
+        </div>
+      )}
     </div>
   );
 }
