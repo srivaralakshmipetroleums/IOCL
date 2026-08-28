@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Droplets } from "lucide-react";
+import { Droplets, ChevronDown } from "lucide-react";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
   periodKeyForMonth,
 } from "@/lib/stock/build-snapshots";
 import type { StockProduct, StockScope, StockSnapshotKind, StockSnapshotRow } from "@/lib/stock/types";
+import { cn } from "@/lib/utils";
 
 function emptyFields() {
   return { msOpening: "", msClosing: "", hsdOpening: "", hsdClosing: "" };
@@ -55,6 +56,7 @@ export function StockSnapshotForm() {
   const [fields, setFields] = useState(emptyFields);
   const [message, setMessage] = useState<string | null>(null);
   const [confirmReplace, setConfirmReplace] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const periodKey =
     scope === "month" ? periodKeyForMonth(year, month) : periodKeyForFinancialYear(fyStartYear);
@@ -130,18 +132,42 @@ export function StockSnapshotForm() {
   }
 
   return (
-    <section className="ioc-card space-y-4 p-5">
-      <div>
-        <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-ioc-navy">
-          <Droplets className="h-4 w-4" />
-          Opening and closing stock
+    <section className="ioc-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded((open) => !open)}
+        aria-expanded={expanded}
+        className="flex w-full items-start gap-3 p-5 text-left transition-colors hover:bg-ioc-surface/30"
+      >
+        <ChevronDown
+          className={cn(
+            "mt-0.5 h-4 w-4 shrink-0 text-ioc-muted transition-transform",
+            expanded && "rotate-180"
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm font-semibold text-ioc-navy">
+            <Droplets className="h-4 w-4 shrink-0" />
+            Opening and closing stock
+          </div>
+          {!expanded && (
+            <p className="mt-1 text-xs text-ioc-muted">
+              {hasSavedStock
+                ? `${periodLabel} · Stock saved — tap to view or edit`
+                : `${periodLabel} · No stock saved — tap to enter values`}
+            </p>
+          )}
+          {expanded && (
+            <p className="mt-1 text-xs text-ioc-muted">
+              Enter tank stock in litres for a month or a financial year. Saved values are used in
+              profit and stock reconciliation.
+            </p>
+          )}
         </div>
-        <p className="text-xs text-ioc-muted">
-          Enter tank stock in litres for a month or a financial year. Saved values are used in
-          profit and stock reconciliation.
-        </p>
-      </div>
+      </button>
 
+      {expanded && (
+        <div className="space-y-4 border-t border-ioc-border px-5 pb-5 pt-4">
       <div className="flex flex-wrap gap-2">
         {(
           [
@@ -311,6 +337,8 @@ export function StockSnapshotForm() {
         )}
         {message && <p className="text-sm text-ioc-muted">{message}</p>}
       </div>
+        </div>
+      )}
     </section>
   );
 }
