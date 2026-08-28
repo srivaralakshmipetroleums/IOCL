@@ -3,16 +3,12 @@
 import dynamic from "next/dynamic";
 import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw } from "lucide-react";
-import { DashboardPeriodSelector } from "@/components/dashboard/DashboardPeriodSelector";
 import { HubTabBar } from "@/components/layout/HubTabBar";
-import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 type HomeTab = "overview" | "sales" | "finance" | "dsr";
 type FinanceTab = "pad" | "bank";
+type SalesView = "invoice" | "overview";
 
 const HOME_TABS = [
   { id: "overview", label: "Overview" },
@@ -26,15 +22,19 @@ const FINANCE_TABS = [
   { id: "bank", label: "Bank" },
 ] as const;
 
+const SALES_TABS = [
+  { id: "invoice", label: "Invoice dashboard" },
+  { id: "overview", label: "Business overview" },
+] as const;
+
 const BusinessDashboard = dynamic(
   () =>
     import("@/components/dashboard/BusinessDashboard").then((mod) => mod.BusinessDashboard),
   { loading: () => <TabLoading label="Overview" /> }
 );
 
-const InvoiceDashboardView = dynamic(
-  () =>
-    import("@/components/dashboard/InvoiceDashboardView").then((mod) => mod.InvoiceDashboardView),
+const DashboardPage = dynamic(
+  () => import("@/components/dashboard/DashboardPage").then((mod) => mod.DashboardPage),
   { loading: () => <TabLoading label="Sales" /> }
 );
 
@@ -74,31 +74,37 @@ function isFinanceTab(value: string | null): value is FinanceTab {
   return value === "pad" || value === "bank";
 }
 
-function InvoiceSalesTab() {
-  const { refreshDashboard, isRefreshing } = useDashboardPeriod()!;
+function isSalesView(value: string | null): value is SalesView {
+  return value === "invoice" || value === "overview";
+}
 
+function SalesTab({
+  salesView,
+  onSalesViewChange,
+}: {
+  salesView: SalesView;
+  onSalesViewChange: (view: SalesView) => void;
+}) {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-ioc-navy">Invoice analytics</h2>
-          <p className="text-sm text-ioc-muted">
-            Operational charts, line items, and invoice KPIs for the selected period.
-          </p>
-        </div>
-        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[360px]">
-          <DashboardPeriodSelector />
-          <Button
-            onClick={() => refreshDashboard()}
-            disabled={isRefreshing}
-            className="w-full sm:w-auto"
-          >
-            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-            {isRefreshing ? "Refreshing..." : "Refresh"}
-          </Button>
-        </div>
+    <div className="min-w-0 space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-ioc-navy">Invoice analytics</h2>
+        <p className="mt-1 text-sm text-ioc-muted">
+          {salesView === "invoice"
+            ? "Operational charts, line items, and invoice KPIs."
+            : "Executive analytics, month comparisons, price trends, and FY insights."}
+        </p>
       </div>
-      <InvoiceDashboardView />
+      <HubTabBar
+        tabs={[...SALES_TABS]}
+        active={salesView}
+        onChange={(id) => onSalesViewChange(id as SalesView)}
+      />
+      <DashboardPage
+        embedded
+        view={salesView}
+        onViewChange={onSalesViewChange}
+      />
     </div>
   );
 }
@@ -111,7 +117,7 @@ function FinanceTab({
   onFinanceTabChange: (tab: FinanceTab) => void;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <HubTabBar
         tabs={[...FINANCE_TABS]}
         active={financeTab}
@@ -128,14 +134,17 @@ export function HomeHub() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const financeParam = searchParams.get("finance");
+  const salesViewParam = searchParams.get("salesView");
   const tab: HomeTab = isHomeTab(tabParam) ? tabParam : "overview";
   const financeTab: FinanceTab = isFinanceTab(financeParam) ? financeParam : "pad";
+  const salesView: SalesView = isSalesView(salesViewParam) ? salesViewParam : "invoice";
 
   const setTab = useCallback(
     (next: HomeTab) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", next);
       if (next !== "finance") params.delete("finance");
+      if (next !== "sales") params.delete("salesView");
       router.push(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams]
@@ -151,11 +160,23 @@ export function HomeHub() {
     [pathname, router, searchParams]
   );
 
+  const setSalesView = useCallback(
+    (next: SalesView) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", "sales");
+      params.set("salesView", next);
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [pathname, router, searchParams]
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <HubTabBar tabs={[...HOME_TABS]} active={tab} onChange={(id) => setTab(id as HomeTab)} />
       {tab === "overview" && <BusinessDashboard />}
-      {tab === "sales" && <InvoiceSalesTab />}
+      {tab === "sales" && (
+        <SalesTab salesView={salesView} onSalesViewChange={setSalesView} />
+      )}
       {tab === "finance" && (
         <FinanceTab financeTab={financeTab} onFinanceTabChange={setFinanceTab} />
       )}

@@ -110,18 +110,18 @@ export function PadLedgerTable({ rows, isLoading }: PadLedgerTableProps) {
 
   return (
     <div className="ioc-card overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-ioc-border p-4 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="flex min-w-0 flex-col gap-3 border-b border-ioc-border p-4 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           type="search"
           placeholder="Search UTR, bill no, description..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-10 flex-1 rounded-[10px] border border-ioc-border px-3 text-sm outline-none focus:border-ioc-blue sm:min-w-[200px]"
+          className="h-10 w-full min-w-0 flex-1 rounded-[10px] border border-ioc-border px-3 text-sm outline-none focus:border-ioc-blue sm:min-w-[200px]"
         />
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="h-10 rounded-[10px] border border-ioc-border px-3 text-sm"
+          className="h-10 w-full min-w-0 max-w-full rounded-[10px] border border-ioc-border px-3 text-sm sm:w-auto"
         >
           <option value="">All categories</option>
           {PAD_TRANSACTION_CATEGORIES.filter((c) => c !== "SUMMARY").map((c) => (
@@ -133,7 +133,7 @@ export function PadLedgerTable({ rows, isLoading }: PadLedgerTableProps) {
         <select
           value={docTypeFilter}
           onChange={(e) => setDocTypeFilter(e.target.value)}
-          className="h-10 rounded-[10px] border border-ioc-border px-3 text-sm"
+          className="h-10 w-full min-w-0 max-w-full rounded-[10px] border border-ioc-border px-3 text-sm sm:w-auto"
         >
           <option value="">All document types</option>
           {docTypes.map((t) => (
@@ -145,17 +145,18 @@ export function PadLedgerTable({ rows, isLoading }: PadLedgerTableProps) {
       </div>
 
       {monthsInView.length > 1 && (
-        <div className="flex items-center justify-between border-b border-ioc-border bg-ioc-surface/50 px-4 py-2">
+        <div className="flex flex-col gap-2 border-b border-ioc-border bg-ioc-surface/50 px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
             disabled={safePageIndex === 0}
+            className="w-full sm:w-auto"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
           </Button>
-          <span className="text-sm font-medium text-ioc-navy">
+          <span className="min-w-0 truncate text-center text-sm font-medium text-ioc-navy">
             {activeMonth ? formatMonthLabel(activeMonth) : "—"} — Page {safePageIndex + 1} of{" "}
             {monthsInView.length}
           </span>
@@ -164,6 +165,7 @@ export function PadLedgerTable({ rows, isLoading }: PadLedgerTableProps) {
             size="sm"
             onClick={() => setPageIndex((p) => Math.min(monthsInView.length - 1, p + 1))}
             disabled={safePageIndex >= monthsInView.length - 1}
+            className="w-full sm:w-auto"
           >
             Next
             <ChevronRight className="h-4 w-4" />

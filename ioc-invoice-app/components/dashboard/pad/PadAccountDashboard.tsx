@@ -117,11 +117,11 @@ export function PadAccountDashboard() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <PageTitle>Account Dashboard</PageTitle>
 
-        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[360px]">
+        <div className="ioc-toolbar">
           <DashboardPeriodSelector />
           <div className="flex flex-wrap gap-2">
             <Button

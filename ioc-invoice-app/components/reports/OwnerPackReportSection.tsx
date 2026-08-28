@@ -95,8 +95,8 @@ export function OwnerPackReportSection() {
         </div>
 
         {mode === "month" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+          <div className="ioc-form-grid">
+            <div className="ioc-form-field">
               <Label>Year</Label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -110,7 +110,7 @@ export function OwnerPackReportSection() {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
+            <div className="ioc-form-field">
               <Label>Month</Label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -128,7 +128,7 @@ export function OwnerPackReportSection() {
         )}
 
         {mode === "financialYear" && (
-          <div className="space-y-2 sm:max-w-xs">
+          <div className="ioc-form-field">
             <Label>Financial year starting</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -145,12 +145,12 @@ export function OwnerPackReportSection() {
         )}
 
         {mode === "range" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+          <div className="ioc-form-grid">
+            <div className="ioc-form-field">
               <Label>From</Label>
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="ioc-form-field">
               <Label>To</Label>
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>

@@ -60,9 +60,9 @@ export function DsrDashboard() {
   const missingPreview = data?.missingDates.slice(0, 8) ?? [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+    <div className="min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <PageTitle>DSR Dashboard</PageTitle>
           <p className="mt-1 text-sm text-ioc-muted">
             IRAS daily sales report — tank/totalizer litres, stock, receipt vs invoice, and fuel
@@ -70,7 +70,7 @@ export function DsrDashboard() {
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[360px]">
+        <div className="ioc-toolbar">
           <DashboardPeriodSelector />
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">

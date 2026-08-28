@@ -55,6 +55,20 @@
     @apply bg-ioc-page text-ioc-text antialiased;
     overflow-x: hidden;
   }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="time"] {
+    min-width: 0;
+    -webkit-min-logical-width: 0;
+  }
 }
 
 @layer components {
@@ -97,5 +111,17 @@
     -webkit-backdrop-filter: blur(10px);
     border-color: rgba(255, 255, 255, 0.55);
     box-shadow: 0 8px 32px rgba(0, 43, 92, 0.14);
+  }
+
+  .ioc-toolbar {
+    @apply flex w-full min-w-0 max-w-full flex-col gap-3 lg:w-auto lg:max-w-xl;
+  }
+
+  .ioc-form-grid {
+    @apply grid min-w-0 gap-3 sm:grid-cols-2;
+  }
+
+  .ioc-form-field {
+    @apply min-w-0 space-y-1.5;
   }
 }

@@ -29,7 +29,7 @@ export function InvoiceListPage({ embedded = false }: { embedded?: boolean }) {
   const totalPages = Math.ceil((data?.total || 0) / 20);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       {!embedded && (
         <div>
           <PageTitle>Invoices</PageTitle>
@@ -37,7 +37,7 @@ export function InvoiceListPage({ embedded = false }: { embedded?: boolean }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           placeholder="Search by SAP invoice number, supplier, or date (DD/MM/YYYY)..."
           value={search}
@@ -45,7 +45,7 @@ export function InvoiceListPage({ embedded = false }: { embedded?: boolean }) {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className="w-full sm:max-w-sm"
+          className="min-w-0 w-full sm:max-w-sm"
         />
         <select
           value={status}
@@ -53,7 +53,7 @@ export function InvoiceListPage({ embedded = false }: { embedded?: boolean }) {
             setStatus(e.target.value);
             setPage(1);
           }}
-          className="h-10 w-full rounded-[10px] border border-ioc-border bg-white px-3 text-sm sm:w-auto"
+          className="h-10 w-full min-w-0 max-w-full rounded-[10px] border border-ioc-border bg-white px-3 text-sm sm:w-auto"
         >
           <option value="">All Statuses</option>
           <option value="EXTRACTED">Extracted</option>

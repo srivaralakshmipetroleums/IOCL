@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import {
   getCurrentMonthPeriod,
@@ -79,7 +80,7 @@ export function DashboardPeriodSelector() {
   }
 
   return (
-    <div className="w-full space-y-3 sm:min-w-[320px] sm:max-w-xl">
+    <div className="ioc-toolbar space-y-3">
       <Label className="text-xs font-semibold uppercase tracking-wide text-ioc-muted">Period</Label>
 
       <div className="flex flex-wrap gap-2">
@@ -94,7 +95,7 @@ export function DashboardPeriodSelector() {
                 setSelectedMonths([current.dateFrom.slice(0, 7)]);
               }
             }}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`max-w-full rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               mode === option.id
                 ? "bg-ioc-blue text-white"
                 : "bg-ioc-section text-ioc-muted hover:bg-ioc-border/60"
@@ -106,58 +107,46 @@ export function DashboardPeriodSelector() {
       </div>
 
       {mode === "month" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        <div className="ioc-form-grid">
+          <div className="ioc-form-field">
             <Label className="text-xs">Year</Label>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="flex h-10 w-full rounded-[10px] border border-ioc-border bg-white px-3 text-sm"
-            >
+            <Select value={year} onChange={(e) => setYear(Number(e.target.value))}>
               {getYearOptions().map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
-            </select>
+            </Select>
           </div>
-          <div className="space-y-1.5">
+          <div className="ioc-form-field">
             <Label className="text-xs">Month</Label>
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="flex h-10 w-full rounded-[10px] border border-ioc-border bg-white px-3 text-sm"
-            >
+            <Select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       )}
 
       {mode === "financialYear" && (
-        <div className="space-y-1.5">
+        <div className="ioc-form-field">
           <Label className="text-xs">Financial year (Apr – Mar)</Label>
-          <select
-            value={fyStartYear}
-            onChange={(e) => setFyStartYear(Number(e.target.value))}
-            className="flex h-10 w-full rounded-[10px] border border-ioc-border bg-white px-3 text-sm"
-          >
+          <Select value={fyStartYear} onChange={(e) => setFyStartYear(Number(e.target.value))}>
             {getFinancialYearOptions().map((startYear) => (
               <option key={startYear} value={startYear}>
                 FY {startYear}-{String(startYear + 1).slice(-2)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
       {mode === "range" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        <div className="ioc-form-grid">
+          <div className="ioc-form-field">
             <Label className="text-xs">From</Label>
             <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           </div>
-          <div className="space-y-1.5">
+          <div className="ioc-form-field">
             <Label className="text-xs">To</Label>
             <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           </div>
@@ -165,24 +154,24 @@ export function DashboardPeriodSelector() {
       )}
 
       {mode === "multiMonth" && (
-        <div className="max-h-44 space-y-2 overflow-y-auto rounded-[10px] border border-ioc-border bg-white p-3">
+        <div className="max-h-44 min-w-0 space-y-2 overflow-y-auto rounded-[10px] border border-ioc-border bg-white p-3">
           {getRecentMonthOptions().map((option) => (
-            <label key={option.key} className="flex items-center gap-2 text-sm">
+            <label key={option.key} className="flex min-w-0 items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={selectedMonths.includes(option.key)}
                 onChange={() => toggleMonth(option.key)}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 shrink-0 rounded border-gray-300"
               />
-              <span>{option.label}</span>
+              <span className="min-w-0 break-words">{option.label}</span>
             </label>
           ))}
         </div>
       )}
 
-      <p className="text-xs text-ioc-muted">
+      <p className="min-w-0 break-words text-xs text-ioc-muted">
         Showing: <strong className="text-ioc-navy">{period.label}</strong>
-        <span className="block">{period.dateFrom} to {period.dateTo}</span>
+        <span className="block break-all">{period.dateFrom} to {period.dateTo}</span>
       </p>
     </div>
   );

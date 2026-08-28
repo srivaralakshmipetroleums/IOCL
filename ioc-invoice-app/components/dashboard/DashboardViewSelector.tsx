@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 export type DashboardViewMode = "invoice" | "overview";
 
 interface DashboardViewSelectorProps {
@@ -10,20 +12,19 @@ interface DashboardViewSelectorProps {
 
 export function DashboardViewSelector({ value, onChange, disabled }: DashboardViewSelectorProps) {
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       <label htmlFor="dashboard-view" className="text-sm font-medium text-ioc-navy">
         View
       </label>
-      <select
+      <Select
         id="dashboard-view"
         value={value}
         onChange={(e) => onChange(e.target.value as DashboardViewMode)}
         disabled={disabled}
-        className="h-10 w-full rounded-[10px] border border-ioc-border bg-white px-3 text-sm outline-none focus:border-ioc-blue sm:min-w-[220px]"
       >
         <option value="invoice">Invoice Dashboard</option>
         <option value="overview">Business Overview</option>
-      </select>
+      </Select>
       <p className="text-xs text-ioc-muted">
         {value === "invoice"
           ? "Operational charts, line items, and invoice detail."

@@ -17,9 +17,11 @@ import type { DashboardAnalytics } from "@/lib/dashboard/analytics/types";
 interface DashboardPageProps {
   view: DashboardViewMode;
   onViewChange: (view: DashboardViewMode) => void;
+  /** When true, view switching is handled by a parent (e.g. Home hub sub-tabs). */
+  embedded?: boolean;
 }
 
-export function DashboardPage({ view, onViewChange }: DashboardPageProps) {
+export function DashboardPage({ view, onViewChange, embedded = false }: DashboardPageProps) {
   const { period, refreshDashboard, isRefreshing } = useDashboardPeriod()!;
 
   const qs = useMemo(() => buildDashboardQueryString(period), [period]);
@@ -43,12 +45,20 @@ export function DashboardPage({ view, onViewChange }: DashboardPageProps) {
     });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <PageTitle>Invoice</PageTitle>
+    <div className="min-w-0 space-y-6">
+      <div
+        className={
+          embedded
+            ? "flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-end"
+            : "flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+        }
+      >
+        {!embedded && <PageTitle>Invoice</PageTitle>}
 
-        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[360px]">
-          <DashboardViewSelector value={view} onChange={onViewChange} disabled={isRefreshing} />
+        <div className="ioc-toolbar">
+          {!embedded && (
+            <DashboardViewSelector value={view} onChange={onViewChange} disabled={isRefreshing} />
+          )}
           <DashboardPeriodSelector />
           <Button
             onClick={() => refreshDashboard()}

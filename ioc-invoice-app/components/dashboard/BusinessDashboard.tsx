@@ -51,9 +51,9 @@ export function BusinessDashboard() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+    <div className="min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <PageTitle>Dashboard</PageTitle>
           <p className="text-sm text-ioc-muted">
             Profit &amp; loss for {period.label} — tank stock, IOCL invoices, PAD and bank.
@@ -61,7 +61,7 @@ export function BusinessDashboard() {
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[320px]">
+        <div className="ioc-toolbar">
           <DashboardPeriodSelector />
           <Button onClick={() => refreshDashboard()} disabled={isRefreshing} className="w-full sm:w-auto">
             <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
@@ -152,7 +152,7 @@ export function BusinessDashboard() {
 
           <p className="text-xs text-ioc-muted">
             Drill down:{" "}
-            <Link href="/dashboard?tab=sales" className="text-ioc-blue hover:underline">
+            <Link href="/dashboard?tab=sales&salesView=invoice" className="text-ioc-blue hover:underline">
               Invoice analytics
             </Link>
             {" · "}

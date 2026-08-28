@@ -99,18 +99,18 @@ export function BankLedgerTable({ rows, isLoading }: BankLedgerTableProps) {
 
   return (
     <div className="ioc-card overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-ioc-border p-4 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="flex min-w-0 flex-col gap-3 border-b border-ioc-border p-4 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           type="search"
           placeholder="Search description, UTR, reference..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-10 flex-1 rounded-[10px] border border-ioc-border px-3 text-sm outline-none focus:border-ioc-blue sm:min-w-[200px]"
+          className="h-10 w-full min-w-0 flex-1 rounded-[10px] border border-ioc-border px-3 text-sm outline-none focus:border-ioc-blue sm:min-w-[200px]"
         />
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="h-10 rounded-[10px] border border-ioc-border px-3 text-sm"
+          className="h-10 w-full min-w-0 max-w-full rounded-[10px] border border-ioc-border px-3 text-sm sm:w-auto"
         >
           <option value="">All categories</option>
           {BANK_TRANSACTION_CATEGORIES.map((category) => (

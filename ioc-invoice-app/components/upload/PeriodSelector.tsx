@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   getMonthDateRange,
@@ -53,7 +54,7 @@ export function PeriodSelector({ onChange }: PeriodSelectorProps) {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="flex flex-wrap gap-2">
         {(["month", "year", "range"] as PeriodMode[]).map((m) => (
           <button
@@ -72,73 +73,61 @@ export function PeriodSelector({ onChange }: PeriodSelectorProps) {
       </div>
 
       {mode === "month" && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
+        <div className="ioc-form-grid">
+          <div className="ioc-form-field">
             <Label>Month</Label>
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
+            <Select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
-            </select>
+            </Select>
           </div>
-          <div className="space-y-2">
+          <div className="ioc-form-field">
             <Label>Year</Label>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
+            <Select value={year} onChange={(e) => setYear(Number(e.target.value))}>
               {getYearOptions().map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       )}
 
       {mode === "year" && (
-        <div className="space-y-2">
+        <div className="ioc-form-field">
           <Label>Year</Label>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 text-sm"
-          >
+          <Select value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {getYearOptions().map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
       {mode === "range" && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
+        <div className="ioc-form-grid">
+          <div className="ioc-form-field">
             <Label>From</Label>
             <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           </div>
-          <div className="space-y-2">
+          <div className="ioc-form-field">
             <Label>To</Label>
             <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           </div>
         </div>
       )}
 
-      <div className="rounded-md bg-muted p-3 text-sm">
+      <div className="min-w-0 rounded-md bg-muted p-3 text-sm">
         <p>
           Selected period: <strong>{period.label}</strong>
         </p>
-        <p className="text-muted-foreground">
+        <p className="break-all text-muted-foreground">
           {period.dateFrom} → {period.dateTo} (exclusive end)
         </p>
       </div>
 
       {coverage && (
-        <div className="flex items-start gap-2 text-sm">
+        <div className="flex min-w-0 flex-col gap-2 text-sm sm:flex-row sm:items-start">
           {coverage.hasExistingData ? (
             <Badge variant="warning">{coverage.existingCount} already extracted</Badge>
           ) : (

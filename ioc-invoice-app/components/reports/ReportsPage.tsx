@@ -69,20 +69,20 @@ export function ReportsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+          <div className="ioc-form-grid">
+            <div className="ioc-form-field">
               <Label>Date From</Label>
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="ioc-form-field">
               <Label>Date To</Label>
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="ioc-form-field">
               <Label>Supplier</Label>
               <Input placeholder="Filter by supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="ioc-form-field">
               <Label>Product</Label>
               <Input placeholder="Filter by product" value={product} onChange={(e) => setProduct(e.target.value)} />
             </div>
