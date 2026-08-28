@@ -1,5 +1,5 @@
-import { DsrDashboard } from "@/components/dsr/DsrDashboard";
+import { redirect } from "next/navigation";
 
-export default function DsrPage() {
-  return <DsrDashboard />;
+export default function Page() {
+  redirect("/dashboard?tab=dsr");
 }

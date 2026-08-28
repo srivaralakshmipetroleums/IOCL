@@ -1,5 +1,5 @@
-import { BankDashboard } from "@/components/dashboard/bank/BankDashboard";
+import { redirect } from "next/navigation";
 
-export default function BankPage() {
-  return <BankDashboard />;
+export default function Page() {
+  redirect("/dashboard?tab=finance&finance=bank");
 }

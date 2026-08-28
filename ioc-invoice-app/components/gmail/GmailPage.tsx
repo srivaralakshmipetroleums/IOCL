@@ -287,7 +287,7 @@ async function fetchDateRangeChunk(
   return result;
 }
 
-export function GmailPage() {
+export function GmailPage({ embedded = false }: { embedded?: boolean }) {
   const searchParams = useSearchParams();
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
   const [dateTo, setDateTo] = useState(getDefaultDateTo);
@@ -510,12 +510,14 @@ export function GmailPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <PageTitle>Gmail Invoice Fetch</PageTitle>
-        <p className="mt-2 text-sm text-ioc-muted">
-          Fetch IOC invoice PDFs and retail selling price (RSP) emails from Gmail
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <PageTitle>Gmail Invoice Fetch</PageTitle>
+          <p className="mt-2 text-sm text-ioc-muted">
+            Fetch IOC invoice PDFs and retail selling price (RSP) emails from Gmail
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -813,7 +815,7 @@ export function GmailPage() {
                     {rspResult.errors.map((e, i) => <li key={i}>{e}</li>)}
                   </ul>
                 )}
-                <Link href="/account">
+                <Link href="/dashboard?tab=finance&finance=pad">
                   <Button variant="outline" size="sm">View Account Dashboard</Button>
                 </Link>
               </div>

@@ -36,7 +36,7 @@ export function DashboardComingSoon() {
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button asChild>
-              <Link href="/invoice">
+              <Link href="/dashboard?tab=sales">
                 <LayoutDashboard className="h-4 w-4" />
                 Open Invoice module
               </Link>

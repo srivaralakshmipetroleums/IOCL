@@ -12,7 +12,7 @@ import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Invoice } from "@/types/database";
 
-export function InvoiceListPage() {
+export function InvoiceListPage({ embedded = false }: { embedded?: boolean }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -30,10 +30,12 @@ export function InvoiceListPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <PageTitle>Invoices</PageTitle>
-        <p className="mt-2 text-sm text-ioc-muted">Search and manage invoice records</p>
-      </div>
+      {!embedded && (
+        <div>
+          <PageTitle>Invoices</PageTitle>
+          <p className="mt-2 text-sm text-ioc-muted">Search and manage invoice records</p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input

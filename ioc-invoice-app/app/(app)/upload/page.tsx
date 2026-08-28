@@ -1,7 +1,5 @@
-"use client";
-
-import { UploadPage } from "@/components/upload/UploadPage";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <UploadPage />;
+  redirect("/invoices?tab=upload");
 }

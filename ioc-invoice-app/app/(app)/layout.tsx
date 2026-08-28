@@ -1,15 +1,11 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { createClient } from "@/lib/supabase/server";
+import { getServerSession } from "@/lib/supabase/server";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const session = await getServerSession();
 
-  if (error || !user) {
+  if (!session?.user) {
     redirect("/login");
   }
 

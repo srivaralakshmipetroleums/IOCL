@@ -1,11 +1,5 @@
-import { Suspense } from "react";
-import { GmailPage } from "@/components/gmail/GmailPage";
-import { Skeleton } from "@/components/ui/skeleton";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return (
-    <Suspense fallback={<Skeleton className="h-96" />}>
-      <GmailPage />
-    </Suspense>
-  );
+  redirect("/invoices?tab=gmail");
 }

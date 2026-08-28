@@ -152,15 +152,15 @@ export function BusinessDashboard() {
 
           <p className="text-xs text-ioc-muted">
             Drill down:{" "}
-            <Link href="/invoice" className="text-ioc-blue hover:underline">
+            <Link href="/dashboard?tab=sales" className="text-ioc-blue hover:underline">
               Invoice analytics
             </Link>
             {" · "}
-            <Link href="/account" className="text-ioc-blue hover:underline">
+            <Link href="/dashboard?tab=finance&finance=pad" className="text-ioc-blue hover:underline">
               PAD account
             </Link>
             {" · "}
-            <Link href="/bank" className="text-ioc-blue hover:underline">
+            <Link href="/dashboard?tab=finance&finance=bank" className="text-ioc-blue hover:underline">
               Bank
             </Link>
             {" · "}

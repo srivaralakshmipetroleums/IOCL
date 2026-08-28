@@ -407,7 +407,7 @@ export function IrasDsrCapturePage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageTitle>IRAS DSR Capture</PageTitle>
         <Button asChild variant="outline">
-          <Link href="/dsr">
+          <Link href="/dashboard?tab=dsr">
             <ExternalLink className="h-4 w-4" />
             View DSR dashboard
           </Link>
@@ -508,7 +508,7 @@ export function IrasDsrCapturePage() {
               </Button>
               <p className="text-sm text-muted-foreground">
                 Captured data appears in the{" "}
-                <Link href="/dsr" className="font-medium text-ioc-blue underline">
+                <Link href="/dashboard?tab=dsr" className="font-medium text-ioc-blue underline">
                   DSR dashboard
                 </Link>
                 .

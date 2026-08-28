@@ -17,7 +17,7 @@ interface ExtractionConfig {
   serviceRoleConfigured: boolean;
 }
 
-export function UploadPage() {
+export function UploadPage({ embedded = false }: { embedded?: boolean }) {
   const now = new Date();
   const [period, setPeriod] = useState<DatePeriod>(() =>
     getMonthDateRange(now.getFullYear(), now.getMonth() + 1)
@@ -30,12 +30,14 @@ export function UploadPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <PageTitle>Upload IOC Invoice PDFs</PageTitle>
-        <p className="mt-2 text-sm text-ioc-muted">
-          Drag and drop or browse to upload invoice PDFs for a selected period.
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <PageTitle>Upload IOC Invoice PDFs</PageTitle>
+          <p className="mt-2 text-sm text-ioc-muted">
+            Drag and drop or browse to upload invoice PDFs for a selected period.
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

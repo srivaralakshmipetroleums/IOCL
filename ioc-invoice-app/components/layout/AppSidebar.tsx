@@ -5,20 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
-  Upload,
   BarChart3,
   Settings,
-  Mail,
   X,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
-  Wallet,
-  Landmark,
-  LineChart,
   Gauge,
-  Radar,
-  ClipboardList,
 } from "lucide-react";
 import { IndianOilLogo } from "@/components/brand/IndianOilLogo";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -26,23 +19,19 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 function isNavActive(pathname: string, href: string): boolean {
-  if (href === "/invoice") {
-    return pathname === "/invoice";
+  if (href === "/dashboard") {
+    return pathname === "/dashboard";
+  }
+  if (href === "/invoices") {
+    return pathname === "/invoices" || pathname.startsWith("/invoices/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/day-close", label: "Day close", icon: Gauge },
-  { href: "/dsr", label: "DSR", icon: ClipboardList },
-  { href: "/iras-dsr", label: "IRAS DSR", icon: Radar, badge: "POC" },
-  { href: "/invoice", label: "Invoice", icon: LineChart },
-  { href: "/account", label: "Account", icon: Wallet },
-  { href: "/bank", label: "Bank", icon: Landmark },
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/invoices", label: "Invoices", icon: FileText },
-  { href: "/upload", label: "Upload Invoices", icon: Upload },
-  { href: "/gmail", label: "Gmail Invoices", icon: Mail, badge: "New" },
+  { href: "/day-close", label: "Day close", icon: Gauge },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -141,19 +130,7 @@ export function AppSidebar() {
                 )}
               >
                 <Icon className="h-[18px] w-[18px] shrink-0" />
-                {!collapsed && (
-                  <>
-                    <span className="flex-1 truncate">{item.label}</span>
-                    {item.badge && !active && (
-                      <span className="rounded-full bg-ioc-orange px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-                {collapsed && item.badge && !active && (
-                  <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ioc-orange" />
-                )}
+                {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
               </Link>
             );
           })}

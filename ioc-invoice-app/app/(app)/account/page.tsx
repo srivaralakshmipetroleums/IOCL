@@ -1,5 +1,5 @@
-import { PadAccountDashboard } from "@/components/dashboard/pad/PadAccountDashboard";
+import { redirect } from "next/navigation";
 
-export default function AccountPage() {
-  return <PadAccountDashboard />;
+export default function Page() {
+  redirect("/dashboard?tab=finance&finance=pad");
 }
