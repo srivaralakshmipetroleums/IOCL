@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { DashboardPeriodProvider } from "@/components/layout/DashboardPeriodContext";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
+import { AddToHomeScreen } from "@/components/pwa/AddToHomeScreen";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +19,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
               <main className="flex-1 overflow-x-hidden overflow-y-auto">
-                <div className="mx-auto w-full min-w-0 max-w-[1400px] p-3 sm:p-4 md:p-6">{children}</div>
+                <div className="mx-auto w-full min-w-0 max-w-[1400px] p-3 sm:p-4 md:p-6">
+                  <div className="mb-4 md:hidden">
+                    <AddToHomeScreen placement="app" />
+                  </div>
+                  {children}
+                </div>
               </main>
 
               <AppFooter />

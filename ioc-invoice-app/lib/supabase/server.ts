@@ -15,7 +15,12 @@ export async function createClient() {
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {
+                ...options,
+                path: typeof options?.path === "string" ? options.path : "/",
+                sameSite: (options?.sameSite as "lax" | "strict" | "none") ?? "lax",
+                secure: process.env.NODE_ENV === "production",
+              })
             );
           } catch {
             // Server Component — ignore

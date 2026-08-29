@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ENABLE_SIGNUP } from "@/lib/auth/auth-config";
+import { AddToHomeScreen } from "@/components/pwa/AddToHomeScreen";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -115,6 +116,9 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Please wait..." : ENABLE_SIGNUP && isSignUp ? "Sign Up" : "Sign In"}
               </Button>
+              <p className="text-center text-xs text-ioc-muted">
+                You&apos;ll stay signed in on this device until you sign out.
+              </p>
               {ENABLE_SIGNUP && (
                 <Button
                   type="button"
@@ -126,6 +130,7 @@ export default function LoginPage() {
                 </Button>
               )}
             </form>
+            <AddToHomeScreen placement="login" />
           </CardContent>
         </Card>
       </div>

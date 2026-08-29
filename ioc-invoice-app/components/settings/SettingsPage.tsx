@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageTitle } from "@/components/layout/PageTitle";
-import { LogOut, Sparkles, RefreshCw } from "lucide-react";
+import { LogOut, RefreshCw, Smartphone, Sparkles } from "lucide-react";
+import { AddToHomeScreen } from "@/components/pwa/AddToHomeScreen";
 
 const EXTRACTION_MODE_KEY = "ioc-extraction-mode";
 
@@ -48,7 +49,7 @@ export function SettingsPage() {
 
   async function handleLogout() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     router.push("/login");
     router.refresh();
   }
@@ -110,6 +111,21 @@ export function SettingsPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh status
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            Install app
+          </CardTitle>
+          <CardDescription>
+            Add to your phone home screen for quick access without opening the browser each time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AddToHomeScreen placement="settings" />
         </CardContent>
       </Card>
 
