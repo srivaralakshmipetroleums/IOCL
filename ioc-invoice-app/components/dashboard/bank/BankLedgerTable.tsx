@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BANK_CATEGORY_LABELS, BANK_TRANSACTION_CATEGORIES } from "@/lib/bank/categorize";
 import { formatCurrencyINR } from "@/lib/dashboard/format";
 import { Button } from "@/components/ui/button";
+import { WideTableScroll } from "@/components/ui/simple-table";
 import { cn } from "@/lib/utils";
 
 export interface BankLedgerRow {
@@ -158,7 +159,7 @@ export function BankLedgerTable({ rows, isLoading }: BankLedgerTableProps) {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <WideTableScroll>
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-ioc-border bg-ioc-surface/30 text-left text-ioc-muted">
@@ -213,7 +214,7 @@ export function BankLedgerTable({ rows, isLoading }: BankLedgerTableProps) {
             )}
           </tbody>
         </table>
-      </div>
+      </WideTableScroll>
     </div>
   );
 }

@@ -1,6 +1,13 @@
 "use client";
 
 import { MoneyKpiValue } from "@/components/dashboard/MoneyKpiValue";
+import {
+  ThreeColumnRow,
+  ThreeColumnTable,
+  TwoColumnRow,
+  TwoColumnTable,
+  WideTableScroll,
+} from "@/components/ui/simple-table";
 import { formatIndianCompact, formatIndianNumber, formatPricePerLitre } from "@/lib/dashboard/format";
 import type { FuelSalesReport, ProfitLedgerLine } from "@/lib/stock/types";
 
@@ -23,32 +30,36 @@ function ParticularTable({
   rows: ProfitLedgerLine[];
 }) {
   return (
-    <div className="ioc-card overflow-x-auto">
-      <table className="w-full min-w-[480px]">
-        <thead>
-          <tr className="border-b border-ioc-border bg-ioc-section/80 text-left text-xs uppercase tracking-wide text-ioc-muted">
-            <th className="px-3 py-2.5 font-semibold">Particular</th>
-            <th className="px-3 py-2.5 text-right font-semibold">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((line) => {
-            const bold = line.kind === "total" || line.kind === "subtotal";
-            return (
-              <tr
-                key={line.label}
-                className={bold ? "bg-ioc-section/60 font-semibold" : "border-b border-ioc-border/50"}
-              >
-                <td className="px-3 py-2.5 text-sm text-ioc-navy">{line.label}</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatAmount(line.amount, line.kind)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <TwoColumnTable>
+      {rows.map((line) => {
+        const bold = line.kind === "total" || line.kind === "subtotal";
+        return (
+          <TwoColumnRow
+            key={line.label}
+            label={line.label}
+            value={formatAmount(line.amount, line.kind)}
+            bold={bold}
+          />
+        );
+      })}
+    </TwoColumnTable>
+  );
+}
+
+function PadReconciliationTable({ pad }: { pad: FuelSalesReport["padMoney"] }) {
+  const rows: Array<{ label: string; amount: string; bold?: boolean }> = [
+    { label: "Dealer commission", amount: formatIndianCompact(pad.dealerCommission) },
+    { label: "PAD deductions", amount: formatAmount(pad.padDeductions, "deduction") },
+    { label: "Other PAD charges (interest)", amount: formatAmount(pad.otherPadCharges, "deduction") },
+    { label: "Net PAD contribution", amount: formatIndianCompact(pad.netPadContribution), bold: true },
+  ];
+
+  return (
+    <TwoColumnTable>
+      {rows.map((row) => (
+        <TwoColumnRow key={row.label} label={row.label} value={row.amount} bold={row.bold} />
+      ))}
+    </TwoColumnTable>
   );
 }
 
@@ -57,7 +68,7 @@ export function FuelSalesReportView({ report }: { report: FuelSalesReport }) {
   const pad = report.padMoney;
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       <section className="ioc-card p-6">
         <p className="text-sm font-medium text-ioc-muted">Net profit / loss for this period</p>
         {pl.netProfit != null ? (
@@ -88,57 +99,45 @@ export function FuelSalesReportView({ report }: { report: FuelSalesReport }) {
           Actual sold = opening stock + purchases − closing stock. Litres come from tanks and IOCL
           invoices, not from the bank.
         </p>
-        <div className="ioc-card overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead>
-              <tr className="border-b border-ioc-border bg-ioc-section/80 text-left text-xs uppercase tracking-wide text-ioc-muted">
-                <th className="px-3 py-2.5 font-semibold">Particular</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Petrol (MS)</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Diesel (HSD)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-ioc-border/50">
-                <td className="px-3 py-2.5 text-sm">Opening stock</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[0]?.openingLitres ?? null)}
-                </td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[1]?.openingLitres ?? null)}
-                </td>
-              </tr>
-              <tr className="border-b border-ioc-border/50">
-                <td className="px-3 py-2.5 text-sm">Purchases</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[0]?.purchaseLitres ?? null)}
-                </td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[1]?.purchaseLitres ?? null)}
-                </td>
-              </tr>
-              <tr className="border-b border-ioc-border/50">
-                <td className="px-3 py-2.5 text-sm">Closing stock</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[0]?.closingLitres ?? null)}
-                </td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[1]?.closingLitres ?? null)}
-                </td>
-              </tr>
-              <tr className="bg-ioc-section/60 font-semibold">
-                <td className="px-3 py-2.5 text-sm">Actual sold</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[0]?.actualSoldLitres ?? null)}
-                </td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatLitres(report.stockReconciliation[1]?.actualSoldLitres ?? null)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div className="ioc-card overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+        <ThreeColumnTable
+          col1Header="Particular"
+          col2Header={
+            <>
+              <span className="sm:hidden">MS</span>
+              <span className="hidden sm:inline">Petrol (MS)</span>
+            </>
+          }
+          col3Header={
+            <>
+              <span className="sm:hidden">HSD</span>
+              <span className="hidden sm:inline">Diesel (HSD)</span>
+            </>
+          }
+        >
+          <ThreeColumnRow
+            col1="Opening stock"
+            col2={formatLitres(report.stockReconciliation[0]?.openingLitres ?? null)}
+            col3={formatLitres(report.stockReconciliation[1]?.openingLitres ?? null)}
+          />
+          <ThreeColumnRow
+            col1="Purchases"
+            col2={formatLitres(report.stockReconciliation[0]?.purchaseLitres ?? null)}
+            col3={formatLitres(report.stockReconciliation[1]?.purchaseLitres ?? null)}
+          />
+          <ThreeColumnRow
+            col1="Closing stock"
+            col2={formatLitres(report.stockReconciliation[0]?.closingLitres ?? null)}
+            col3={formatLitres(report.stockReconciliation[1]?.closingLitres ?? null)}
+          />
+          <ThreeColumnRow
+            col1="Actual sold"
+            col2={formatLitres(report.stockReconciliation[0]?.actualSoldLitres ?? null)}
+            col3={formatLitres(report.stockReconciliation[1]?.actualSoldLitres ?? null)}
+            bold
+          />
+        </ThreeColumnTable>
+        <WideTableScroll className="ioc-card">
+          <table className="w-full min-w-[640px] text-sm sm:min-w-0 sm:table-fixed">
             <thead>
               <tr className="border-b border-ioc-border bg-ioc-section/80 text-left text-xs uppercase tracking-wide text-ioc-muted">
                 <th className="px-3 py-2.5 font-semibold">Fuel</th>
@@ -182,7 +181,7 @@ export function FuelSalesReportView({ report }: { report: FuelSalesReport }) {
               })}
             </tbody>
           </table>
-        </div>
+        </WideTableScroll>
       </section>
 
       <section className="space-y-3">
@@ -196,57 +195,13 @@ export function FuelSalesReportView({ report }: { report: FuelSalesReport }) {
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-ioc-navy">PAD reconciliation</h2>
-        <div className="ioc-card overflow-x-auto">
-          <table className="w-full min-w-[480px]">
-            <thead>
-              <tr className="border-b border-ioc-border bg-ioc-section/80 text-left text-xs uppercase tracking-wide text-ioc-muted">
-                <th className="px-3 py-2.5 font-semibold">Particular</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-ioc-border/50">
-                <td className="px-3 py-2.5 text-sm">Dealer commission</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatIndianCompact(pad.dealerCommission)}
-                </td>
-              </tr>
-              <tr className="border-b border-ioc-border/50">
-                <td className="px-3 py-2.5 text-sm">PAD deductions</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatAmount(pad.padDeductions, "deduction")}
-                </td>
-              </tr>
-              <tr className="border-b border-ioc-border/50">
-                <td className="px-3 py-2.5 text-sm">Other PAD charges (interest)</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatAmount(pad.otherPadCharges, "deduction")}
-                </td>
-              </tr>
-              <tr className="bg-ioc-section/60 font-semibold">
-                <td className="px-3 py-2.5 text-sm">Net PAD contribution</td>
-                <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                  {formatIndianCompact(pad.netPadContribution)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <PadReconciliationTable pad={pad} />
         {pad.discount > 0 && (
           <p className="text-xs text-ioc-muted">
             IOCL incentives of {formatIndianCompact(pad.discount)} are shown as other operating
             income in the P&amp;L, not inside net PAD contribution.
           </p>
         )}
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-base font-semibold text-ioc-navy">How to read this</h2>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-ioc-muted">
-          {report.ownerNotes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
-        </ul>
       </section>
     </div>
   );

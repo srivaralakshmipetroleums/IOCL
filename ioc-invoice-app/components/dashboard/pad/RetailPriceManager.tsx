@@ -7,6 +7,7 @@ import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { buildDashboardQueryString } from "@/lib/dashboard/filters";
 import { fetchDashboardJson } from "@/lib/dashboard/fetch";
 import { Button } from "@/components/ui/button";
+import { WideTableScroll } from "@/components/ui/simple-table";
 
 interface RetailPrice {
   id: string;
@@ -154,8 +155,8 @@ export function RetailPriceManager() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <WideTableScroll>
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-ioc-border text-left text-ioc-muted">
               <th className="py-2 pr-4">Product</th>
@@ -200,7 +201,7 @@ export function RetailPriceManager() {
             )}
           </tbody>
         </table>
-      </div>
+      </WideTableScroll>
     </div>
   );
 }

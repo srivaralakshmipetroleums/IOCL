@@ -12,6 +12,7 @@
     "import:pad": "npx tsx scripts/import-pad-statements.ts",
     "import:bank": "npx tsx scripts/import-bank-statements.ts",
     "import:retail-prices": "npx tsx scripts/import-retail-prices.ts",
+    "backfill:dsr-totalizer": "npx tsx scripts/backfill-dsr-totalizer.ts",
     "cron:gmail-weekly": "npx tsx scripts/run-weekly-gmail-sync.ts",
     "iras:install-browser": "npx playwright install chromium"
   },

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
+import { WideTableScroll } from "@/components/ui/simple-table";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Invoice, InvoiceLineItem } from "@/types/database";
 
@@ -162,7 +163,8 @@ export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> 
       <Card>
         <CardHeader><CardTitle>Line Items</CardTitle></CardHeader>
         <CardContent>
-          <table className="w-full text-sm">
+          <WideTableScroll>
+          <table className="w-full min-w-[640px] text-sm sm:min-w-0 sm:table-fixed">
             <thead>
               <tr className="border-b text-left">
                 <th className="pb-2 pr-4">Product</th>
@@ -188,6 +190,7 @@ export function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> 
               ))}
             </tbody>
           </table>
+          </WideTableScroll>
         </CardContent>
       </Card>
     </div>

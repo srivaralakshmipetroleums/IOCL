@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { WideTableScroll } from "@/components/ui/simple-table";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Invoice } from "@/types/database";
@@ -113,7 +114,7 @@ export function InvoiceListPage({ embedded = false }: { embedded?: boolean }) {
               </div>
 
               {/* Desktop table */}
-              <div className="hidden overflow-x-auto md:block">
+              <WideTableScroll className="hidden md:block" hint={false}>
                 <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-ioc-border bg-ioc-section text-left">
@@ -150,7 +151,7 @@ export function InvoiceListPage({ embedded = false }: { embedded?: boolean }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </WideTableScroll>
             </>
           )}
 

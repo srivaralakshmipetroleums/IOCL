@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { DsrCharts } from "@/components/dsr/DsrCharts";
+import { DsrImportPanel } from "@/components/dsr/DsrImportPanel";
 import { DsrKpiCards } from "@/components/dsr/DsrKpiCards";
 import { DsrLedgerTable } from "@/components/dsr/DsrLedgerTable";
 import { DsrReceiptReconciliationTable } from "@/components/dsr/DsrReceiptReconciliationTable";
@@ -95,13 +96,15 @@ export function DsrDashboard() {
 
       {!isLoading && data?.summary.daysCaptured === 0 && (
         <p className="rounded-lg border border-ioc-warning/30 bg-ioc-warning-light px-4 py-2 text-sm text-ioc-navy">
-          No DSR records in this period. Use{" "}
+          No DSR records in this period. Upload monthly MS and HSD Excel files below, or use{" "}
           <Link href="/iras-dsr" className="font-medium text-ioc-blue underline">
             IRAS DSR capture
           </Link>{" "}
-          to import data, then return here to view it.
+          to import data automatically.
         </p>
       )}
+
+      <DsrImportPanel />
 
       {data && data.missingDates.length > 0 && (
         <p className="rounded-lg border border-ioc-border bg-ioc-surface/50 px-4 py-2 text-sm text-ioc-navy">

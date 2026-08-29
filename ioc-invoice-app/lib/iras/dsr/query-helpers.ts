@@ -73,3 +73,44 @@ export async function getDsrRecordsInPeriod(
       return leftIso.localeCompare(rightIso) || left.product.localeCompare(right.product);
     });
 }
+
+/** Latest stored row per product strictly before `beforeDate` (for nozzle meter lookback). */
+export async function getDsrMeterLookbackEntries(
+  supabase: SupabaseClient,
+  beforeDate: string
+): Promise<DsrStoredRecordEntry[]> {
+  const rows = await fetchAllPages(async (from, to) => {
+    const { data, error } = await supabase
+      .from("iras_dsr_records")
+      .select("dsr_date, product, record_data")
+      .order("dsr_date", { ascending: true })
+      .order("product", { ascending: true })
+      .range(from, to);
+
+    if (error) throw error;
+    return data ?? [];
+  });
+
+  const latestByProduct = new Map<IrasDsrProduct, DsrStoredRecordEntry>();
+
+  for (const row of rows) {
+    const product = row.product === "MS" || row.product === "HSD" ? row.product : null;
+    if (!product) continue;
+
+    const dsrDate = String(row.dsr_date);
+    const isoDate =
+      dsrDateToIso(dsrDate) ??
+      dsrDateToIso(
+        typeof row.record_data?.date_time === "string" ? row.record_data.date_time : ""
+      );
+    if (!isoDate || isoDate >= beforeDate) continue;
+
+    latestByProduct.set(product, {
+      dsrDate,
+      product,
+      record: row.record_data as IrasDsrRecord,
+    });
+  }
+
+  return [...latestByProduct.values()];
+}

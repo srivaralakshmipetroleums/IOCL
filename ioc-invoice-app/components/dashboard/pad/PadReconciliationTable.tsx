@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PadReconciliationRow } from "@/lib/pad/reconciliation";
 import { formatCurrencyINR } from "@/lib/dashboard/format";
 import { Button } from "@/components/ui/button";
+import { WideTableScroll } from "@/components/ui/simple-table";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -132,7 +133,7 @@ export function PadReconciliationTable({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <WideTableScroll>
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="border-b border-ioc-border bg-ioc-surface/30 text-left text-ioc-muted">
@@ -193,7 +194,7 @@ export function PadReconciliationTable({
             )}
           </tbody>
         </table>
-      </div>
+      </WideTableScroll>
     </div>
   );
 }

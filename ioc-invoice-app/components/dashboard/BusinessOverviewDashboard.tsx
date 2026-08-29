@@ -31,6 +31,7 @@ import { fetchDashboardJson } from "@/lib/dashboard/fetch";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WideTableScroll } from "@/components/ui/simple-table";
 
 interface BusinessOverviewDashboardProps {
   analytics?: DashboardAnalytics;
@@ -165,7 +166,7 @@ export function BusinessOverviewDashboard({
       {fyComparison.current && fyComparison.previous && (
         <div className="ioc-card p-5">
           <h3 className="mb-4 text-sm font-semibold text-ioc-navy">Financial Year Comparison</h3>
-          <div className="overflow-x-auto">
+          <WideTableScroll>
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-ioc-border text-left text-ioc-muted">
@@ -194,7 +195,7 @@ export function BusinessOverviewDashboard({
                 ))}
               </tbody>
             </table>
-          </div>
+          </WideTableScroll>
         </div>
       )}
 
@@ -302,7 +303,7 @@ export function BusinessOverviewDashboard({
         <h3 className="border-b border-ioc-border px-5 py-4 text-sm font-semibold text-ioc-navy">
           Month-on-Month Comparison
         </h3>
-        <div className="overflow-x-auto">
+        <WideTableScroll>
           <table className="w-full min-w-[1100px] text-sm">
             <thead>
               <tr className="bg-ioc-section text-left text-xs uppercase text-ioc-muted">
@@ -343,7 +344,7 @@ export function BusinessOverviewDashboard({
               ))}
             </tbody>
           </table>
-        </div>
+        </WideTableScroll>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">

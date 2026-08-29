@@ -28,6 +28,7 @@ import type {
   PadRateTrendPoint,
 } from "@/lib/pad/metrics";
 import { formatPadCurrency } from "@/components/dashboard/pad/PadKpiCards";
+import { TwoColumnRow, TwoColumnTable, WideTableScroll } from "@/components/ui/simple-table";
 
 function formatKl(value: number): string {
   return `${value.toFixed(1)} KL`;
@@ -403,21 +404,21 @@ export function PadCharts({
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="ioc-table-wrap">
+                <table className="ioc-table-3col">
                   <thead>
                     <tr className="border-b border-ioc-border text-left text-ioc-muted">
-                      <th className="py-2 pr-4">Type</th>
-                      <th className="py-2 pr-4">Count</th>
-                      <th className="py-2">Amount</th>
+                      <th className="w-[40%] py-2 pr-2 font-semibold sm:pr-4">Type</th>
+                      <th className="w-[25%] py-2 pr-2 text-right font-semibold sm:pr-4">Count</th>
+                      <th className="w-[35%] py-2 text-right font-semibold">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {charges.byType.map((row) => (
                       <tr key={row.name} className="border-b border-ioc-border/60">
-                        <td className="py-2 pr-4 font-medium text-ioc-navy">{row.name}</td>
-                        <td className="py-2 pr-4">{formatIndianNumber(row.count)}</td>
-                        <td className="py-2">{formatPadCurrency(row.totalDebit)}</td>
+                        <td className="break-words py-2 pr-2 font-medium text-ioc-navy sm:pr-4">{row.name}</td>
+                        <td className="whitespace-nowrap py-2 pr-2 text-right sm:pr-4">{formatIndianNumber(row.count)}</td>
+                        <td className="whitespace-nowrap py-2 text-right">{formatPadCurrency(row.totalDebit)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -435,7 +436,8 @@ export function PadCharts({
                 Individual charges
               </h4>
               <div className="max-h-72 overflow-auto">
-                <table className="w-full text-sm">
+                <WideTableScroll hint={false}>
+                <table className="w-full min-w-[520px] text-sm">
                   <thead>
                     <tr className="border-b border-ioc-border text-left text-ioc-muted">
                       <th className="py-2 pr-4">Date</th>
@@ -457,6 +459,7 @@ export function PadCharts({
                     ))}
                   </tbody>
                 </table>
+                </WideTableScroll>
               </div>
             </div>
           </div>
@@ -481,17 +484,12 @@ function ChargePeriodTable({
     <div>
       <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ioc-muted">{title}</h4>
       <div className="max-h-56 overflow-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-ioc-border text-left text-ioc-muted">
-              <th className="py-2 pr-4">Period</th>
-              <th className="py-2 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.period} className="border-b border-ioc-border/60">
-                <td className="py-2 pr-4">
+        <TwoColumnTable labelHeader="Period" valueHeader="Total" card={false}>
+          {rows.map((row) => (
+            <TwoColumnRow
+              key={row.period}
+              label={
+                <>
                   <div className="font-medium text-ioc-navy">{formatPeriod(row.period)}</div>
                   <div className="text-xs text-ioc-muted">
                     {Object.entries(row.byName)
@@ -499,12 +497,12 @@ function ChargePeriodTable({
                       .map(([name, amount]) => `${name} ${formatPadCurrency(amount)}`)
                       .join(" · ")}
                   </div>
-                </td>
-                <td className="py-2 text-right font-medium">{formatPadCurrency(row.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </>
+              }
+              value={formatPadCurrency(row.total)}
+            />
+          ))}
+        </TwoColumnTable>
       </div>
     </div>
   );

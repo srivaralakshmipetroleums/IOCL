@@ -22,6 +22,7 @@ import {
   getFinancialYearStartYear,
   getRecentMonthOptions,
 } from "@/lib/dashboard/period";
+import { getYearOptions } from "@/lib/invoices/period-utils";
 import type {
   IrasDsrCaptureStatus,
   IrasDsrStatusResponse,
@@ -30,8 +31,6 @@ import type {
 
 const SELECT_CLASS =
   "flex h-10 w-full rounded-[10px] border border-ioc-border bg-white px-3 text-sm";
-
-const DSR_YEAR_OPTIONS = [2024, 2025, 2026, 2027];
 
 const BATCH_MODE_OPTIONS: Array<{ id: IrasDsrBatchCaptureMode; label: string }> = [
   { id: "range", label: "Month range" },
@@ -153,6 +152,7 @@ export function IrasDsrCapturePage() {
 
   const recentMonthOptions = useMemo(() => getRecentMonthOptions(24), []);
   const financialYearOptions = useMemo(() => getFinancialYearOptions(), []);
+  const yearOptions = useMemo(() => getYearOptions(), []);
 
   const refreshStoredData = useCallback(async () => {
     try {
@@ -474,7 +474,7 @@ export function IrasDsrCapturePage() {
                   className={SELECT_CLASS}
                   disabled={isCaptureBusy}
                 >
-                  {DSR_YEAR_OPTIONS.map((year) => (
+                  {yearOptions.map((year) => (
                     <option key={year} value={year}>
                       {year}
                     </option>
@@ -601,7 +601,7 @@ export function IrasDsrCapturePage() {
                     className={SELECT_CLASS}
                     disabled={isCaptureBusy}
                   >
-                    {DSR_YEAR_OPTIONS.map((year) => (
+                    {yearOptions.map((year) => (
                       <option key={year} value={year}>
                         {year}
                       </option>

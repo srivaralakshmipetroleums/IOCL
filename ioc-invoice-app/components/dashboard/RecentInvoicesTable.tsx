@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge";
+import { WideTableScroll } from "@/components/ui/simple-table";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -45,8 +46,8 @@ export function RecentInvoicesTable() {
       <div className="border-b border-ioc-border px-5 py-4">
         <h3 className="text-sm font-semibold text-ioc-navy">Recent Invoices</h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <WideTableScroll>
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="bg-ioc-section">
               {["Date", "Bill No", "Supplier", "Products", "Invoice Value", "Status"].map((h) => (
@@ -104,7 +105,7 @@ export function RecentInvoicesTable() {
             )}
           </tbody>
         </table>
-      </div>
+      </WideTableScroll>
     </div>
   );
 }

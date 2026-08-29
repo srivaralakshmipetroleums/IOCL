@@ -124,4 +124,24 @@
   .ioc-form-field {
     @apply min-w-0 space-y-1.5;
   }
+
+  .ioc-table-wrap {
+    @apply min-w-0 overflow-hidden;
+  }
+
+  .ioc-table-wrap-scroll {
+    @apply min-w-0 overflow-x-auto;
+  }
+
+  .ioc-table-2col {
+    @apply w-full table-fixed text-sm;
+  }
+
+  .ioc-table-3col {
+    @apply w-full table-fixed text-sm;
+  }
+
+  .ioc-table-4col {
+    @apply w-full table-fixed text-sm;
+  }
 }

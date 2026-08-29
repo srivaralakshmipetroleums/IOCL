@@ -254,13 +254,13 @@ export function StockSnapshotForm() {
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px]">
+      <div className="ioc-table-wrap">
+        <table className="ioc-table-3col">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-ioc-muted">
-              <th className="pb-2 font-semibold">Fuel</th>
-              <th className="pb-2 font-semibold">Opening (L)</th>
-              <th className="pb-2 font-semibold">Closing (L)</th>
+              <th className="w-[28%] pb-2 font-semibold">Fuel</th>
+              <th className="w-[36%] pb-2 font-semibold">Opening (L)</th>
+              <th className="w-[36%] pb-2 font-semibold">Closing (L)</th>
             </tr>
           </thead>
           <tbody>

@@ -601,8 +601,8 @@ function FuelColumn({
         <p className={cn("text-center text-xs font-bold uppercase tracking-wide", theme.sectionTitle)}>
           Lubes &amp; other sales
         </p>
-        <div className={cn("overflow-x-auto rounded-[6px] border bg-white", theme.panelBorder)}>
-          <table className="w-full min-w-[360px] text-sm">
+        <div className={cn("ioc-table-wrap rounded-[6px] border bg-white", theme.panelBorder)}>
+          <table className="ioc-table-4col">
             <thead>
               <tr
                 className={cn(
@@ -612,10 +612,10 @@ function FuelColumn({
                   theme.labelText
                 )}
               >
-                <th className="px-2 py-2 font-semibold">Description</th>
-                <th className="px-2 py-2 text-right font-semibold">Qty</th>
-                <th className="px-2 py-2 text-right font-semibold">Rate (₹)</th>
-                <th className="px-2 py-2 text-right font-semibold">Amount (₹)</th>
+                <th className="w-[38%] px-2 py-2 font-semibold">Description</th>
+                <th className="w-[18%] px-2 py-2 text-right font-semibold">Qty</th>
+                <th className="w-[22%] px-2 py-2 text-right font-semibold">Rate (₹)</th>
+                <th className="w-[22%] px-2 py-2 text-right font-semibold">Amount (₹)</th>
               </tr>
             </thead>
             <tbody>

@@ -6,6 +6,7 @@ import { formatCurrencyINR, formatIndianNumber } from "@/lib/dashboard/format";
 import type { DsrLedgerRow } from "@/lib/iras/dsr/normalize";
 import type { IrasDsrProduct } from "@/lib/iras/dsr/types";
 import { Button } from "@/components/ui/button";
+import { WideTableScroll } from "@/components/ui/simple-table";
 import { cn } from "@/lib/utils";
 
 const PRODUCT_COLORS: Record<IrasDsrProduct, string> = {
@@ -169,7 +170,7 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <WideTableScroll>
         <table className="w-full min-w-[2400px] text-sm">
           <thead>
             <tr className="border-b border-ioc-border bg-ioc-surface/30 text-left text-ioc-muted">
@@ -215,7 +216,7 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
             )}
           </tbody>
         </table>
-      </div>
+      </WideTableScroll>
     </div>
   );
 }

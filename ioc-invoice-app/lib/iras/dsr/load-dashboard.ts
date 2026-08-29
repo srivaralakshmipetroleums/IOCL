@@ -24,7 +24,7 @@ import {
   type DsrVolumeMonth,
 } from "@/lib/iras/dsr/metrics";
 import type { DsrLedgerRow } from "@/lib/iras/dsr/normalize";
-import { getDsrRecordsInPeriod } from "@/lib/iras/dsr/query-helpers";
+import { getDsrMeterLookbackEntries, getDsrRecordsInPeriod } from "@/lib/iras/dsr/query-helpers";
 import {
   computeDsrReceiptReconciliation,
   type DsrReceiptReconciliationRow,
@@ -85,21 +85,22 @@ export async function loadDsrDashboardData(
 ): Promise<DsrDashboardData> {
   const { dateFrom, dateTo } = requirePeriod(filters);
 
-  const [entries, retailPrices, periodInvoiceFuelByDate, purchaseInvoiceFuelByDate] =
+  const [entries, lookbackEntries, retailPrices, periodInvoiceFuelByDate, purchaseInvoiceFuelByDate] =
     await Promise.all([
       getDsrRecordsInPeriod(supabase, {
         dateFrom,
         dateTo,
         months: filters.months,
       }),
+      getDsrMeterLookbackEntries(supabase, dateFrom),
       getRetailPrices(supabase),
       loadInvoiceFuelByDateProduct(supabase, filters, { throughDateOnly: false }),
       loadInvoiceFuelByDateProduct(supabase, filters, { throughDateOnly: true }),
     ]);
 
-  const baseLedgerRows = buildDsrLedgerRows(entries);
+  const baseLedgerRows = buildDsrLedgerRows([...lookbackEntries, ...entries]);
   const ledgerRows = attachGrossProfitToLedgerRows(
-    baseLedgerRows,
+    baseLedgerRows.filter((row) => row.date >= dateFrom && row.date < dateTo),
     retailPrices,
     purchaseInvoiceFuelByDate
   );

@@ -7,6 +7,7 @@ import {
   type DsrLedgerRow,
 } from "@/lib/iras/dsr/normalize";
 import type { DsrStoredRecordEntry } from "@/lib/iras/dsr/query-helpers";
+import { enrichDsrStoredEntriesWithTotalizerFromMeters } from "@/lib/iras/dsr/totalizer-from-meters";
 
 export interface DsrExecutiveSummary {
   totalMsTankLitres: number;
@@ -83,8 +84,9 @@ function monthKey(isoDate: string): string {
 }
 
 export function buildDsrLedgerRows(entries: DsrStoredRecordEntry[]): DsrLedgerRow[] {
+  const enriched = enrichDsrStoredEntriesWithTotalizerFromMeters(entries);
   const rows: DsrLedgerRow[] = [];
-  for (const entry of entries) {
+  for (const entry of enriched) {
     const row = normalizeDsrRecord(entry.record, entry.product, entry.dsrDate);
     if (row) rows.push(row);
   }

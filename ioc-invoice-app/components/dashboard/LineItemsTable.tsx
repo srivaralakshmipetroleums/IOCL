@@ -7,6 +7,7 @@ import { FUEL_PRODUCTS } from "@/lib/dashboard/fuel-products";
 import { formatCurrencyINR, formatIndianNumber } from "@/lib/dashboard/format";
 import { matchesDateSearch, parseMonthSearch, parseSearchDate } from "@/lib/search/date-search";
 import { Button } from "@/components/ui/button";
+import { WideTableScroll } from "@/components/ui/simple-table";
 
 export interface LineItemRow {
   id: string;
@@ -153,8 +154,8 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <WideTableScroll>
+        <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr>
               {columns.map((col) => (
@@ -210,7 +211,7 @@ export function LineItemsTable({ items, isLoading }: LineItemsTableProps) {
             )}
           </tbody>
         </table>
-      </div>
+      </WideTableScroll>
 
       {monthsInView.length > 1 && currentMonth && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ioc-border bg-ioc-section px-5 py-3">

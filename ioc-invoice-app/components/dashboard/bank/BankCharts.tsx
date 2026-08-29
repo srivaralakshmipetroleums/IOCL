@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { IOC_CHART, CHART_COLORS } from "@/lib/dashboard/constants";
 import { formatChartLakhs, formatCurrencyINR } from "@/lib/dashboard/format";
+import { TwoColumnRow, TwoColumnTable } from "@/components/ui/simple-table";
 import type {
   BankBalancePoint,
   BankCashFlowMonth,
@@ -187,35 +188,28 @@ export function BankCharts({
           <p className="text-sm text-ioc-muted">No missed days in this period.</p>
         ) : (
           <div className="max-h-72 overflow-auto text-sm">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="text-left text-xs text-ioc-muted">
-                  <th className="sticky top-0 bg-white py-1 pr-2">Date</th>
-                  <th className="sticky top-0 bg-white py-1">Flags</th>
-                </tr>
-              </thead>
-              <tbody>
-                {walletMissedDays.map((row) => (
-                  <tr key={row.date} className="border-t border-ioc-border">
-                    <td className="py-1.5 pr-2 whitespace-nowrap">{row.date}</td>
-                    <td className="py-1.5">
-                      <span className="flex flex-wrap gap-1">
-                        {row.missedPhonePe && (
-                          <span className="rounded bg-purple-100 px-1.5 py-0.5 text-xs text-purple-800">
-                            No PhonePe
-                          </span>
-                        )}
-                        {row.missedPaytm && (
-                          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-800">
-                            No Paytm
-                          </span>
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TwoColumnTable labelHeader="Date" valueHeader="Flags" card={false}>
+              {walletMissedDays.map((row) => (
+                <TwoColumnRow
+                  key={row.date}
+                  label={row.date}
+                  value={
+                    <span className="flex flex-wrap justify-end gap-1">
+                      {row.missedPhonePe && (
+                        <span className="rounded bg-purple-100 px-1.5 py-0.5 text-xs text-purple-800">
+                          No PhonePe
+                        </span>
+                      )}
+                      {row.missedPaytm && (
+                        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-800">
+                          No Paytm
+                        </span>
+                      )}
+                    </span>
+                  }
+                />
+              ))}
+            </TwoColumnTable>
           </div>
         )}
       </div>

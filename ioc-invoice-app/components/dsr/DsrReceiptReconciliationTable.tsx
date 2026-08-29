@@ -8,6 +8,7 @@ import type {
   DsrReceiptReconciliationSummary,
 } from "@/lib/iras/dsr/receipt-reconciliation";
 import { Button } from "@/components/ui/button";
+import { WideTableScroll } from "@/components/ui/simple-table";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<DsrReceiptReconciliationRow["status"], string> = {
@@ -137,7 +138,7 @@ export function DsrReceiptReconciliationTable({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <WideTableScroll>
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-ioc-border bg-ioc-surface/30 text-left text-ioc-muted">
@@ -193,7 +194,7 @@ export function DsrReceiptReconciliationTable({
             )}
           </tbody>
         </table>
-      </div>
+      </WideTableScroll>
     </div>
   );
 }

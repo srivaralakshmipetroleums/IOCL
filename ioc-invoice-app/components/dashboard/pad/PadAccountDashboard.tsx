@@ -155,6 +155,9 @@ export function PadAccountDashboard() {
 
       <PadKpiCards summary={summary} isLoading={summaryLoading} />
 
+      <SectionTitle>RSP margin watch</SectionTitle>
+      <RspMarginWatch />
+
       <SectionTitle>Charts</SectionTitle>
       <PadCharts
         balanceTrend={balanceTrend}
@@ -178,9 +181,6 @@ export function PadAccountDashboard() {
         summary={reconciliationData?.summary}
         isLoading={reconLoading}
       />
-
-      <SectionTitle>RSP margin watch</SectionTitle>
-      <RspMarginWatch />
 
       <SectionTitle>Retail Prices</SectionTitle>
       <RetailPriceManager />
