@@ -16,7 +16,7 @@ function unwrapCell(value: CellValue): unknown {
   if (value == null) return "";
   if (value instanceof Date) return value;
   if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
+    const obj = value as unknown as Record<string, unknown>;
     if (obj.result !== undefined) return unwrapCell(obj.result as CellValue);
     if (typeof obj.text === "string") return obj.text;
     if (Array.isArray(obj.richText)) {
@@ -294,13 +294,20 @@ function expectedTankLabel(product: IrasDsrProduct): string {
   return product === "MS" ? "Tank-1" : "Tank-2";
 }
 
+type XlsxBuffer = Parameters<Workbook["xlsx"]["load"]>[0];
+
+function toXlsxBuffer(buffer: Buffer | ArrayBuffer): XlsxBuffer {
+  const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+  return Buffer.from(bytes) as unknown as XlsxBuffer;
+}
+
 export async function parseDsrExcelBuffer(
   buffer: Buffer | ArrayBuffer,
   product: IrasDsrProduct,
   sourceFilename = "upload.xlsx"
 ): Promise<ParseDsrExcelResult> {
   const workbook = new Workbook();
-  await workbook.xlsx.load(buffer);
+  await workbook.xlsx.load(toXlsxBuffer(buffer));
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
     throw new Error("Workbook has no worksheets");

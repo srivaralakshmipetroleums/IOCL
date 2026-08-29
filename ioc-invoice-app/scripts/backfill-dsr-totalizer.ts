@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import path from "path";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dsrDateToIso } from "@/lib/iras/dsr/normalize";
 import type { DsrStoredRecordEntry } from "@/lib/iras/dsr/query-helpers";
 import type { IrasDsrProduct, IrasDsrRecord } from "@/lib/iras/dsr/types";
@@ -55,10 +55,17 @@ function entryIsoDate(entry: DsrStoredRecordEntry): string | null {
   );
 }
 
+type DsrRecordRow = {
+  id: string;
+  dsr_date: string;
+  product: string | null;
+  record_data: unknown;
+};
+
 async function loadAllDsrRecords(
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient
 ): Promise<Array<DsrStoredRecordEntry & { id: string }>> {
-  const rows = await fetchAllPages(async (from, to) => {
+  const rows = await fetchAllPages<DsrRecordRow>(async (from, to) => {
     const { data, error } = await supabase
       .from("iras_dsr_records")
       .select("id, dsr_date, product, record_data")
@@ -112,8 +119,8 @@ async function main() {
   );
 
   const previousByProduct = new Map<IrasDsrProduct, IrasDsrRecord>();
-  const entriesByKey = new Map(
-    allEntries.map((entry) => [`${entry.dsrDate}::${entry.product}`, entry] as const)
+  const entriesByKey = new Map<string, DsrStoredRecordEntry & { id: string }>(
+    allEntries.map((entry) => [`${entry.dsrDate}::${entry.product}`, entry])
   );
 
   for (const entry of [...allEntries].sort((left, right) => {
