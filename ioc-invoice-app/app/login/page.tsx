@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { BrandedLogo } from "@/components/brand/BrandedLogo";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,14 +55,7 @@ export default function LoginPage() {
 
       <header className="relative z-10 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex items-center gap-3 sm:gap-5">
-          <Image
-            src="/branding/Branded-logo.png"
-            alt="Sri Varalakshmi Petroleums Narpala"
-            width={220}
-            height={140}
-            className="h-16 w-auto shrink-0 sm:h-20"
-            priority
-          />
+          <BrandedLogo size="md" priority className="shrink-0 sm:h-20" />
           <div className="min-w-0 border-l-2 border-ioc-orange pl-3 sm:pl-4">
             <p className="font-semibold text-ioc-navy text-sm sm:text-base">
               Sri Varalakshmi Petroleums

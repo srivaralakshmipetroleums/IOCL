@@ -144,4 +144,20 @@
   .ioc-table-4col {
     @apply w-full table-fixed text-sm;
   }
+
+  .ioc-brand-pulse {
+    animation: ioc-brand-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes ioc-brand-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(0.97);
+  }
 }

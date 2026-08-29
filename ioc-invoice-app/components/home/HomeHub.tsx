@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { HubTabBar } from "@/components/layout/HubTabBar";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandedLoader } from "@/components/brand/BrandedLoader";
 
 type HomeTab = "overview" | "sales" | "finance" | "dsr";
 type FinanceTab = "pad" | "bank";
@@ -57,13 +57,7 @@ const DsrDashboard = dynamic(
 );
 
 function TabLoading({ label }: { label: string }) {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-ioc-muted">Loading {label}…</p>
-      <Skeleton className="h-40 rounded-[10px]" />
-      <Skeleton className="h-64 rounded-[10px]" />
-    </div>
-  );
+  return <BrandedLoader label={`Loading ${label}`} />;
 }
 
 function isHomeTab(value: string | null): value is HomeTab {
