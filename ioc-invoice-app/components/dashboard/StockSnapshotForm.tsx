@@ -297,6 +297,7 @@ export function StockSnapshotForm() {
           <p className="font-medium">Using DSR stock for {periodLabel}</p>
           <p className="mt-1 text-ioc-muted">
             These values are shown on the overview dashboard until you save manual overrides below.
+            Closing stock uses the next month&apos;s 1st-day opening from DSR.
           </p>
           <div className="mt-3 grid gap-1 text-xs sm:grid-cols-2">
             <p>Petrol opening: {dsrLitres(dsrBoundaries.MS.opening)}</p>

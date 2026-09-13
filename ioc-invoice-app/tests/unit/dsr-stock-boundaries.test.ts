@@ -4,6 +4,7 @@ import type { DsrStoredRecordEntry } from "@/lib/iras/dsr/query-helpers";
 import {
   deriveDsrStockBoundaries,
   hasFullDsrStockBoundary,
+  nextIsoDate,
 } from "@/lib/stock/dsr-stock-boundaries";
 import { resolveStockForPeriod } from "@/lib/stock/resolve-period";
 
@@ -25,21 +26,36 @@ function entry(
 }
 
 describe("deriveDsrStockBoundaries", () => {
-  it("uses first-day opening stock and last-day total stock per product", () => {
+  it("uses first-day opening and next-day opening as month-end closing", () => {
     const rows = buildDsrLedgerRows([
       entry("MS", "01-08-2026", 13486.7, 13486.7),
       entry("MS", "31-08-2026", 6098.92, 15098.92),
+      entry("MS", "01-09-2026", 14200, 14200),
       entry("HSD", "01-08-2026", 12885.2, 12885.2),
       entry("HSD", "31-08-2026", 8823.2, 13823.2),
+      entry("HSD", "01-09-2026", 13900, 13900),
     ]);
 
     const boundaries = deriveDsrStockBoundaries(rows, "2026-08-01", "2026-08-31");
 
+    expect(nextIsoDate("2026-08-31")).toBe("2026-09-01");
     expect(boundaries.MS.opening).toBe(13486.7);
-    expect(boundaries.MS.closing).toBe(15098.92);
+    expect(boundaries.MS.closing).toBe(14200);
     expect(boundaries.HSD.opening).toBe(12885.2);
-    expect(boundaries.HSD.closing).toBe(13823.2);
+    expect(boundaries.HSD.closing).toBe(13900);
     expect(hasFullDsrStockBoundary(boundaries)).toBe(true);
+  });
+
+  it("falls back to last-day total stock when next-day opening is unavailable", () => {
+    const rows = buildDsrLedgerRows([
+      entry("MS", "01-08-2026", 100, 100),
+      entry("MS", "31-08-2026", 80, 120),
+    ]);
+
+    const boundaries = deriveDsrStockBoundaries(rows, "2026-08-01", "2026-08-31");
+
+    expect(boundaries.MS.opening).toBe(100);
+    expect(boundaries.MS.closing).toBe(120);
   });
 });
 
@@ -47,28 +63,28 @@ describe("resolveStockForPeriod with DSR fallback", () => {
   it("uses DSR when manual monthly snapshots are missing", () => {
     const dsrRows = buildDsrLedgerRows([
       entry("MS", "01-08-2026", 100, 100),
-      entry("MS", "31-08-2026", 80, 120),
+      entry("MS", "01-09-2026", 130, 130),
       entry("HSD", "01-08-2026", 200, 200),
-      entry("HSD", "31-08-2026", 150, 180),
+      entry("HSD", "01-09-2026", 170, 170),
     ]);
     const boundaries = deriveDsrStockBoundaries(dsrRows, "2026-08-01", "2026-08-31");
 
     const result = resolveStockForPeriod([], "2026-08-01", "2026-08-31", { MS: 1000, HSD: 2000 }, boundaries);
 
     expect(result.ms.openingLitres).toBe(100);
-    expect(result.ms.closingLitres).toBe(120);
+    expect(result.ms.closingLitres).toBe(130);
     expect(result.hsd.openingLitres).toBe(200);
-    expect(result.hsd.closingLitres).toBe(180);
-    expect(result.ms.impliedSalesLitres).toBe(100 + 1000 - 120);
+    expect(result.hsd.closingLitres).toBe(170);
+    expect(result.ms.impliedSalesLitres).toBe(100 + 1000 - 130);
     expect(result.coverageNote).toContain("DSR");
   });
 
   it("prefers manual snapshots over DSR", () => {
     const dsrRows = buildDsrLedgerRows([
       entry("MS", "01-08-2026", 100, 100),
-      entry("MS", "31-08-2026", 80, 120),
+      entry("MS", "01-09-2026", 130, 130),
       entry("HSD", "01-08-2026", 200, 200),
-      entry("HSD", "31-08-2026", 150, 180),
+      entry("HSD", "01-09-2026", 170, 170),
     ]);
     const boundaries = deriveDsrStockBoundaries(dsrRows, "2026-08-01", "2026-08-31");
 
@@ -92,7 +108,7 @@ describe("resolveStockForPeriod with DSR fallback", () => {
     );
 
     expect(result.ms.openingLitres).toBe(999);
-    expect(result.ms.closingLitres).toBe(120);
+    expect(result.ms.closingLitres).toBe(130);
     expect(result.hsd.openingLitres).toBe(200);
   });
 });

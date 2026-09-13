@@ -13,7 +13,7 @@ import { loadPadDashboardData } from "@/lib/pad/load-dashboard";
 import { buildDsrLedgerRows } from "@/lib/iras/dsr/metrics";
 import { getDsrRecordsInPeriod } from "@/lib/iras/dsr/query-helpers";
 import { computeFuelSalesReport } from "@/lib/stock/fuel-sales-report";
-import { deriveDsrStockBoundaries } from "@/lib/stock/dsr-stock-boundaries";
+import { deriveDsrStockBoundaries, dsrStockFetchDateTo } from "@/lib/stock/dsr-stock-boundaries";
 import { getStockSnapshots } from "@/lib/stock/repository";
 import { resolveStockForPeriod, stockProductFromFuel } from "@/lib/stock/resolve-period";
 import type { BusinessDashboardPayload, StockProduct } from "@/lib/stock/types";
@@ -34,7 +34,11 @@ export async function loadBusinessDashboard(
     loadPadDashboardData(supabase, filters),
     loadBankDashboardData(supabase, filters),
     getFilteredInvoices(supabase, filters),
-    getDsrRecordsInPeriod(supabase, { dateFrom, dateTo, months: filters.months }),
+    getDsrRecordsInPeriod(supabase, {
+      dateFrom,
+      dateTo: dsrStockFetchDateTo(dateTo),
+      months: filters.months,
+    }),
   ]);
 
   const invoiceIds = invoices.map((invoice) => invoice.id);

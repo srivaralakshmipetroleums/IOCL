@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { buildDsrLedgerRows } from "@/lib/iras/dsr/metrics";
 import { getDsrRecordsInPeriod } from "@/lib/iras/dsr/query-helpers";
 import { boundaryDatesForScope } from "@/lib/stock/build-snapshots";
-import { deriveDsrStockBoundaries } from "@/lib/stock/dsr-stock-boundaries";
+import { deriveDsrStockBoundaries, dsrStockFetchDateTo } from "@/lib/stock/dsr-stock-boundaries";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { StockScope } from "@/lib/stock/types";
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createServiceClient();
   const entries = await getDsrRecordsInPeriod(supabase, {
     dateFrom: openingDate,
-    dateTo: closingDate,
+    dateTo: dsrStockFetchDateTo(closingDate),
   });
   const boundaries = deriveDsrStockBoundaries(
     buildDsrLedgerRows(entries),

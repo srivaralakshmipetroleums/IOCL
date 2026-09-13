@@ -172,7 +172,8 @@ export function resolveStockForPeriod(
       coverageNote =
         "Stock uses saved manual values where entered; remaining boundaries come from DSR.";
     } else if (anyDsr && !anyManual) {
-      coverageNote = "Stock from DSR tank readings. Save manual values to override.";
+      coverageNote =
+        "Stock from DSR tank readings (closing uses next-day opening stock). Save manual values to override.";
     } else if (!isFullFy) {
       coverageNote =
         "Stock uses FY opening/closing at period boundaries. Add monthly stock for month-wise movement.";
