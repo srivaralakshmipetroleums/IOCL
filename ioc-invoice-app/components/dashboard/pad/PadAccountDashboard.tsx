@@ -161,8 +161,8 @@ export function PadAccountDashboard() {
       )}
 
       <p className="text-xs text-ioc-muted">
-        Upload an IOCL PAD export (.xls HTML file) for one financial year, or use Import all PAD
-        when running locally with files in Docs/PAD/.
+        Upload an IOCL PAD export (.xls from the IOCL portal — usually saved as HTML inside an .xls
+        file), or use Import all PAD when running locally with files in Docs/PAD/.
       </p>
 
       {summary && summary.missingRetailPriceCount > 0 && (
