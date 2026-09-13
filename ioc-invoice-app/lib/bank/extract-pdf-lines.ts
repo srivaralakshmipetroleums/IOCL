@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
-export async function extractPdfLines(filePath: string): Promise<string[]> {
-  const data = new Uint8Array(readFileSync(filePath));
+async function extractPdfLinesFromData(data: Uint8Array): Promise<string[]> {
   const pdf = await getDocument({
     data,
     verbosity: 0,
@@ -36,4 +35,12 @@ export async function extractPdfLines(filePath: string): Promise<string[]> {
   }
 
   return lines;
+}
+
+export async function extractPdfLinesFromBuffer(buffer: Buffer): Promise<string[]> {
+  return extractPdfLinesFromData(new Uint8Array(buffer));
+}
+
+export async function extractPdfLines(filePath: string): Promise<string[]> {
+  return extractPdfLinesFromData(new Uint8Array(readFileSync(filePath)));
 }

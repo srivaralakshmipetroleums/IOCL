@@ -1,5 +1,5 @@
 import { categorizeBankTransaction } from "@/lib/bank/categorize";
-import { extractPdfLines } from "@/lib/bank/extract-pdf-lines";
+import { extractPdfLines, extractPdfLinesFromBuffer } from "@/lib/bank/extract-pdf-lines";
 import {
   fyLabelFromDate,
   headerLabel,
@@ -185,6 +185,14 @@ export function parseBankPdfLines(lines: string[], sourceSheet: string): ParsedB
     sourceSheet,
     transactions,
   };
+}
+
+export async function parseBankStatementPdfFromBuffer(
+  buffer: Buffer,
+  sourceFilename: string
+): Promise<ParsedBankStatement | null> {
+  const lines = await extractPdfLinesFromBuffer(buffer);
+  return parseBankPdfLines(lines, sourceFilename);
 }
 
 export async function parseBankStatementPdf(

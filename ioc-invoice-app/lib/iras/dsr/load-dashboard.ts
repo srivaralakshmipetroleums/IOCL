@@ -24,6 +24,7 @@ import {
   type DsrVolumeMonth,
 } from "@/lib/iras/dsr/metrics";
 import type { DsrLedgerRow } from "@/lib/iras/dsr/normalize";
+import { isIsoDateInInclusivePeriod } from "@/lib/iras/dsr/normalize";
 import { getDsrMeterLookbackEntries, getDsrRecordsInPeriod } from "@/lib/iras/dsr/query-helpers";
 import {
   computeDsrReceiptReconciliation,
@@ -100,7 +101,7 @@ export async function loadDsrDashboardData(
 
   const baseLedgerRows = buildDsrLedgerRows([...lookbackEntries, ...entries]);
   const ledgerRows = attachGrossProfitToLedgerRows(
-    baseLedgerRows.filter((row) => row.date >= dateFrom && row.date < dateTo),
+    baseLedgerRows.filter((row) => isIsoDateInInclusivePeriod(row.date, dateFrom, dateTo)),
     retailPrices,
     purchaseInvoiceFuelByDate
   );

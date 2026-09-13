@@ -140,6 +140,14 @@ export function normalizeDsrRecord(
   };
 }
 
+export function isIsoDateInInclusivePeriod(
+  isoDate: string,
+  dateFrom: string,
+  dateTo: string
+): boolean {
+  return isoDate >= dateFrom && isoDate <= dateTo;
+}
+
 export function countCalendarDays(dateFrom: string, dateTo: string): number {
   const start = new Date(`${dateFrom}T00:00:00`);
   const end = new Date(`${dateTo}T00:00:00`);

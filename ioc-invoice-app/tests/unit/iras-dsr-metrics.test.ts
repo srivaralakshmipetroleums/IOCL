@@ -7,6 +7,7 @@ import {
   computeDsrExecutiveSummary,
   listMissingDsrDates,
 } from "@/lib/iras/dsr/metrics";
+import { isIsoDateInInclusivePeriod } from "@/lib/iras/dsr/normalize";
 import type { DsrStoredRecordEntry } from "@/lib/iras/dsr/query-helpers";
 
 function entry(
@@ -134,6 +135,20 @@ describe("listMissingDsrDates", () => {
     ]);
 
     expect(listMissingDsrDates(rows, "2025-04-01", "2025-04-02")).toEqual(["2025-04-02"]);
+  });
+
+  it("includes the last day of a month in inclusive periods", () => {
+    const rows = buildDsrLedgerRows([
+      entry("MS", "31-08-2026", { netTankSales: "100.00" }),
+      entry("HSD", "31-08-2026", { netTankSales: "200.00" }),
+    ]).filter((row) => isIsoDateInInclusivePeriod(row.date, "2026-08-01", "2026-08-31"));
+
+    const summary = computeDsrExecutiveSummary(rows, "2026-08-01", "2026-08-31");
+
+    expect(rows).toHaveLength(2);
+    expect(summary.daysCaptured).toBe(1);
+    expect(summary.expectedDays).toBe(31);
+    expect(listMissingDsrDates(rows, "2026-08-01", "2026-08-31")).not.toContain("2026-08-31");
   });
 });
 

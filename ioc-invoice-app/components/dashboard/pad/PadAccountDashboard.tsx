@@ -13,6 +13,7 @@ import { SectionTitle } from "@/components/dashboard/DashboardParts";
 import { DashboardPeriodSelector } from "@/components/dashboard/DashboardPeriodSelector";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { StatementFileUpload } from "@/components/dashboard/StatementFileUpload";
 import { Button } from "@/components/ui/button";
 import { buildDashboardQueryString } from "@/lib/dashboard/filters";
 import { fetchDashboardJson } from "@/lib/dashboard/fetch";
@@ -97,8 +98,14 @@ export function PadAccountDashboard() {
   });
 
   const importMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/pad/import", { method: "POST" });
+    mutationFn: async (file?: File) => {
+      const res = file
+        ? await (async () => {
+            const form = new FormData();
+            form.append("file", file);
+            return fetch("/api/pad/import", { method: "POST", body: form });
+          })()
+        : await fetch("/api/pad/import", { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "PAD import failed");
@@ -124,13 +131,20 @@ export function PadAccountDashboard() {
         <div className="ioc-toolbar">
           <DashboardPeriodSelector />
           <div className="flex flex-wrap gap-2">
+            <StatementFileUpload
+              accept=".xls,application/vnd.ms-excel"
+              label="Upload PAD"
+              pendingLabel="Uploading..."
+              disabled={importMutation.isPending}
+              onSelect={(file) => importMutation.mutate(file)}
+            />
             <Button
               variant="outline"
-              onClick={() => importMutation.mutate()}
+              onClick={() => importMutation.mutate(undefined)}
               disabled={importMutation.isPending}
             >
               <Upload className="h-4 w-4" />
-              {importMutation.isPending ? "Importing..." : "Import PAD"}
+              {importMutation.isPending ? "Importing..." : "Import all PAD"}
             </Button>
             <Button onClick={() => refreshDashboard()} disabled={isRefreshing}>
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -145,6 +159,11 @@ export function PadAccountDashboard() {
           {importMessage}
         </p>
       )}
+
+      <p className="text-xs text-ioc-muted">
+        Upload an IOCL PAD export (.xls HTML file) for one financial year, or use Import all PAD
+        when running locally with files in Docs/PAD/.
+      </p>
 
       {summary && summary.missingRetailPriceCount > 0 && (
         <p className="rounded-lg border border-ioc-warning/30 bg-ioc-warning-light px-4 py-2 text-sm text-ioc-warning">

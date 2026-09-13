@@ -1,7 +1,15 @@
 import type { Worksheet, CellValue } from "exceljs";
+import { readFileSync } from "fs";
 import { Workbook } from "exceljs";
 import { dedupeStatements, parseBankGrid } from "@/lib/bank/parse-grid";
 import type { ParsedBankStatement } from "@/lib/bank/types";
+
+type XlsxBuffer = Parameters<Workbook["xlsx"]["load"]>[0];
+
+function toXlsxBuffer(buffer: Buffer | ArrayBuffer): XlsxBuffer {
+  const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+  return Buffer.from(bytes) as unknown as XlsxBuffer;
+}
 
 export {
   fyLabelFromDate,
@@ -41,12 +49,12 @@ function sheetToGrid(ws: Worksheet): string[][] {
   return grid;
 }
 
-export async function parseBankConsolidatedWorkbook(
-  filePath: string,
+export async function parseBankConsolidatedWorkbookFromBuffer(
+  buffer: Buffer,
   sourceFilename: string
 ): Promise<ParsedBankStatement[]> {
   const workbook = new Workbook();
-  await workbook.xlsx.readFile(filePath);
+  await workbook.xlsx.load(toXlsxBuffer(buffer));
   const statements: ParsedBankStatement[] = [];
 
   for (const sheet of workbook.worksheets) {
@@ -59,4 +67,11 @@ export async function parseBankConsolidatedWorkbook(
   }
 
   return dedupeStatements(statements);
+}
+
+export async function parseBankConsolidatedWorkbook(
+  filePath: string,
+  sourceFilename: string
+): Promise<ParsedBankStatement[]> {
+  return parseBankConsolidatedWorkbookFromBuffer(readFileSync(filePath), sourceFilename);
 }

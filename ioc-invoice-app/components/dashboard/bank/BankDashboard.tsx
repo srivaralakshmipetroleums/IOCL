@@ -11,6 +11,7 @@ import { SectionTitle } from "@/components/dashboard/DashboardParts";
 import { DashboardPeriodSelector } from "@/components/dashboard/DashboardPeriodSelector";
 import { useDashboardPeriod } from "@/components/layout/DashboardPeriodContext";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { StatementFileUpload } from "@/components/dashboard/StatementFileUpload";
 import { Button } from "@/components/ui/button";
 import { buildDashboardQueryString } from "@/lib/dashboard/filters";
 import { fetchDashboardJson } from "@/lib/dashboard/fetch";
@@ -55,8 +56,14 @@ export function BankDashboard() {
   });
 
   const importMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/bank/import", { method: "POST" });
+    mutationFn: async (file?: File) => {
+      const res = file
+        ? await (async () => {
+            const form = new FormData();
+            form.append("file", file);
+            return fetch("/api/bank/import", { method: "POST", body: form });
+          })()
+        : await fetch("/api/bank/import", { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Bank import failed");
@@ -64,12 +71,16 @@ export function BankDashboard() {
       return res.json();
     },
     onSuccess: (payload) => {
-      const total = payload.results?.reduce(
+      const imported = payload.results?.filter((row: { skipped?: string }) => !row.skipped) ?? [];
+      const total = imported.reduce(
         (sum: number, row: { transactionCount: number }) => sum + row.transactionCount,
         0
       );
+      const skipped = payload.results?.find((row: { skipped?: string }) => row.skipped)?.skipped;
       setImportMessage(
-        `Imported ${payload.results?.length ?? 0} monthly statements (${total} transactions).`
+        skipped && imported.length === 0
+          ? skipped
+          : `Imported ${imported.length} statement${imported.length === 1 ? "" : "s"} (${total} transactions).`
       );
       queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith("bank-") });
     },
@@ -84,13 +95,20 @@ export function BankDashboard() {
         <div className="ioc-toolbar">
           <DashboardPeriodSelector />
           <div className="flex flex-wrap gap-2">
+            <StatementFileUpload
+              accept=".xlsx,.xls,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/pdf"
+              label="Upload statement"
+              pendingLabel="Uploading..."
+              disabled={importMutation.isPending}
+              onSelect={(file) => importMutation.mutate(file)}
+            />
             <Button
               variant="outline"
-              onClick={() => importMutation.mutate()}
+              onClick={() => importMutation.mutate(undefined)}
               disabled={importMutation.isPending}
             >
               <Upload className="h-4 w-4" />
-              {importMutation.isPending ? "Importing..." : "Import statements"}
+              {importMutation.isPending ? "Importing..." : "Import all statements"}
             </Button>
             <Button onClick={() => refreshDashboard()} disabled={isRefreshing}>
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -105,6 +123,11 @@ export function BankDashboard() {
           {importMessage}
         </p>
       )}
+
+      <p className="text-xs text-ioc-muted">
+        Upload SBI statement files (.xlsx consolidated workbook, monthly .xls export, or .pdf),
+        or use Import all statements when running locally with files in Docs/BANK STMNTS/.
+      </p>
 
       {!isLoading && data?.summary.transactionCount === 0 && (
         <p className="rounded-lg border border-ioc-warning/30 bg-ioc-warning-light px-4 py-2 text-sm text-ioc-navy">
