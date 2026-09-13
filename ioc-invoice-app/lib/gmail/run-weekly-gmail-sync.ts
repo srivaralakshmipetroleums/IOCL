@@ -4,12 +4,23 @@ import { fetchGmailDateRange } from "@/lib/gmail/gmail-service";
 import { fetchGmailRspDateRange } from "@/lib/gmail/gmail-rsp-service";
 import { getLastNDaysRange } from "@/lib/invoices/period-utils";
 
-export interface WeeklyGmailSyncResult {
+export interface WeeklyGmailSyncContext {
   userId: string;
   dateFrom: string;
   dateToInclusive: string;
+}
+
+export interface WeeklyGmailInvoiceSyncResult extends WeeklyGmailSyncContext {
   invoices: Awaited<ReturnType<typeof fetchGmailDateRange>>;
+}
+
+export interface WeeklyGmailRspSyncResult extends WeeklyGmailSyncContext {
   rsp: Awaited<ReturnType<typeof fetchGmailRspDateRange>>;
+}
+
+export interface WeeklyGmailSyncResult extends WeeklyGmailSyncContext {
+  invoices: WeeklyGmailInvoiceSyncResult["invoices"];
+  rsp: WeeklyGmailRspSyncResult["rsp"];
 }
 
 async function resolveCronGmailUserId(supabase: SupabaseClient): Promise<string> {
@@ -33,10 +44,7 @@ async function resolveCronGmailUserId(supabase: SupabaseClient): Promise<string>
   return data.user_id as string;
 }
 
-export async function runWeeklyGmailSync(options?: {
-  days?: number;
-  userId?: string;
-}): Promise<WeeklyGmailSyncResult> {
+function resolveCronDays(options?: { days?: number }): number {
   const days =
     options?.days ??
     Number(process.env.GMAIL_CRON_DAYS?.trim() || 7);
@@ -45,24 +53,66 @@ export async function runWeeklyGmailSync(options?: {
     throw new Error("GMAIL_CRON_DAYS must be a positive number");
   }
 
+  return days;
+}
+
+export async function resolveWeeklyGmailSyncContext(options?: {
+  days?: number;
+  userId?: string;
+}): Promise<WeeklyGmailSyncContext> {
+  const days = resolveCronDays(options);
   const supabase = await createServiceClient();
   const userId = options?.userId ?? (await resolveCronGmailUserId(supabase));
   const { dateFrom, dateToInclusive } = getLastNDaysRange(days);
 
+  return { userId, dateFrom, dateToInclusive };
+}
+
+export async function runWeeklyGmailInvoiceSync(options?: {
+  days?: number;
+  userId?: string;
+}): Promise<WeeklyGmailInvoiceSyncResult> {
+  const context = await resolveWeeklyGmailSyncContext(options);
   const invoices = await fetchGmailDateRange(
-    userId,
-    dateFrom,
-    dateToInclusive,
+    context.userId,
+    context.dateFrom,
+    context.dateToInclusive,
     "claude"
   );
 
-  const rsp = await fetchGmailRspDateRange(userId, dateFrom, dateToInclusive);
+  return { ...context, invoices };
+}
 
-  return {
-    userId,
-    dateFrom,
-    dateToInclusive,
-    invoices,
-    rsp,
-  };
+export async function runWeeklyGmailRspSync(options?: {
+  days?: number;
+  userId?: string;
+}): Promise<WeeklyGmailRspSyncResult> {
+  const context = await resolveWeeklyGmailSyncContext(options);
+  const rsp = await fetchGmailRspDateRange(
+    context.userId,
+    context.dateFrom,
+    context.dateToInclusive
+  );
+
+  return { ...context, rsp };
+}
+
+export async function runWeeklyGmailSync(options?: {
+  days?: number;
+  userId?: string;
+}): Promise<WeeklyGmailSyncResult> {
+  const context = await resolveWeeklyGmailSyncContext(options);
+  const invoices = await fetchGmailDateRange(
+    context.userId,
+    context.dateFrom,
+    context.dateToInclusive,
+    "claude"
+  );
+  const rsp = await fetchGmailRspDateRange(
+    context.userId,
+    context.dateFrom,
+    context.dateToInclusive
+  );
+
+  return { ...context, invoices, rsp };
 }

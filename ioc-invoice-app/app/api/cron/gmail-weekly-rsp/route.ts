@@ -1,24 +1,16 @@
 import { NextRequest } from "next/server";
 import { startGmailCronPhase } from "@/lib/cron/start-gmail-cron-phase";
-import { runWeeklyGmailSync } from "@/lib/gmail/run-weekly-gmail-sync";
+import { runWeeklyGmailRspSync } from "@/lib/gmail/run-weekly-gmail-sync";
 
 export const maxDuration = 300;
 
-/** Legacy combined trigger — prefer split /gmail-weekly-invoices and /gmail-weekly-rsp crons. */
 export async function GET(request: NextRequest) {
-  return startGmailCronPhase(request, "all", async () => {
-    const result = await runWeeklyGmailSync();
+  return startGmailCronPhase(request, "rsp", async () => {
+    const result = await runWeeklyGmailRspSync();
     return {
       userId: result.userId,
       dateFrom: result.dateFrom,
       dateToInclusive: result.dateToInclusive,
-      invoices: {
-        jobId: result.invoices.jobId,
-        emailsFound: result.invoices.emailsFound,
-        invoicesCompleted: result.invoices.invoicesCompleted,
-        skipped: result.invoices.skipped,
-        failed: result.invoices.failed,
-      },
       rsp: {
         jobId: result.rsp.jobId,
         emailsFound: result.rsp.emailsFound,
