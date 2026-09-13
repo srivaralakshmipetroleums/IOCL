@@ -38,6 +38,11 @@ function savedLitres(
   return `${formatIndianNumber(row.quantity_litres)} L`;
 }
 
+function dsrLitres(value: number | null | undefined): string {
+  if (value == null) return "—";
+  return `${formatIndianNumber(value)} L`;
+}
+
 export function StockSnapshotForm() {
   const queryClient = useQueryClient();
   const { period } = useDashboardPeriod()!;
@@ -66,17 +71,48 @@ export function StockSnapshotForm() {
     queryFn: () => fetchDashboardJson("/api/stock-snapshots"),
   });
 
+  const { data: dsrBoundariesPayload } = useQuery<{
+    boundaries: {
+      MS: { opening: number | null; closing: number | null };
+      HSD: { opening: number | null; closing: number | null };
+    };
+  }>({
+    queryKey: ["dsr-stock-boundaries", scope, periodKey],
+    queryFn: () =>
+      fetchDashboardJson(
+        `/api/stock-snapshots/dsr-boundaries?scope=${scope}&periodKey=${encodeURIComponent(periodKey)}`
+      ),
+  });
+
   const savedRows = useMemo(
     () => snapshots.filter((row) => row.scope === scope && row.period_key === periodKey),
     [snapshots, scope, periodKey]
   );
   const hasSavedStock = savedRows.length > 0;
+  const dsrBoundaries = dsrBoundariesPayload?.boundaries;
+  const hasDsrStock =
+    Boolean(dsrBoundaries) &&
+    (dsrBoundaries?.MS.opening != null ||
+      dsrBoundaries?.MS.closing != null ||
+      dsrBoundaries?.HSD.opening != null ||
+      dsrBoundaries?.HSD.closing != null);
 
   useEffect(() => {
     setFields(emptyFields());
     setConfirmReplace(false);
     setMessage(null);
   }, [scope, periodKey]);
+
+  useEffect(() => {
+    if (period.mode === "financialYear") {
+      setScope("financial_year");
+      setFyStartYear(Number(period.dateFrom.slice(0, 4)));
+      return;
+    }
+    setScope("month");
+    setYear(Number(period.dateFrom.slice(0, 4)));
+    setMonth(Number(period.dateFrom.slice(5, 7)));
+  }, [period]);
 
   const periodLabel =
     scope === "month"
@@ -154,13 +190,15 @@ export function StockSnapshotForm() {
             <p className="mt-1 text-xs text-ioc-muted">
               {hasSavedStock
                 ? `${periodLabel} · Stock saved — tap to view or edit`
-                : `${periodLabel} · No stock saved — tap to enter values`}
+                : hasDsrStock
+                  ? `${periodLabel} · Stock from DSR — tap to view or override`
+                  : `${periodLabel} · No stock saved — tap to enter values`}
             </p>
           )}
           {expanded && (
             <p className="mt-1 text-xs text-ioc-muted">
-              Enter tank stock in litres for a month or a financial year. Saved values are used in
-              profit and stock reconciliation.
+              Manual values override DSR for this period. When not saved, opening/closing stock is
+              taken from DSR tank readings automatically.
             </p>
           )}
         </div>
@@ -250,6 +288,21 @@ export function StockSnapshotForm() {
             <p>Petrol closing: {savedLitres(savedRows, "MS", "closing")}</p>
             <p>Diesel opening: {savedLitres(savedRows, "HSD", "opening")}</p>
             <p>Diesel closing: {savedLitres(savedRows, "HSD", "closing")}</p>
+          </div>
+        </div>
+      )}
+
+      {!hasSavedStock && hasDsrStock && dsrBoundaries && (
+        <div className="rounded-lg border border-ioc-border bg-ioc-surface/50 px-4 py-3 text-sm text-ioc-navy">
+          <p className="font-medium">Using DSR stock for {periodLabel}</p>
+          <p className="mt-1 text-ioc-muted">
+            These values are shown on the overview dashboard until you save manual overrides below.
+          </p>
+          <div className="mt-3 grid gap-1 text-xs sm:grid-cols-2">
+            <p>Petrol opening: {dsrLitres(dsrBoundaries.MS.opening)}</p>
+            <p>Petrol closing: {dsrLitres(dsrBoundaries.MS.closing)}</p>
+            <p>Diesel opening: {dsrLitres(dsrBoundaries.HSD.opening)}</p>
+            <p>Diesel closing: {dsrLitres(dsrBoundaries.HSD.closing)}</p>
           </div>
         </div>
       )}

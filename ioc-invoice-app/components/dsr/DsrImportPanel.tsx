@@ -52,6 +52,8 @@ function ProductUploadCard({
         `${product}: imported ${data.recordCount} day${data.recordCount === 1 ? "" : "s"} for ${monthLabel}${range}.${warningText}`
       );
       queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith("dsr-") });
+      queryClient.invalidateQueries({ queryKey: ["business-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["dsr-stock-boundaries"] });
     },
     onError: (err: Error) => onMessage(`${product}: ${err.message}`),
   });

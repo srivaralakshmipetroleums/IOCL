@@ -1,4 +1,5 @@
 import type { FuelProduct } from "@/lib/dashboard/fuel-products";
+import type { DsrStockBoundaries } from "@/lib/stock/dsr-stock-boundaries";
 import type {
   StockCoverage,
   StockPeriodSummary,
@@ -58,7 +59,8 @@ function resolveBoundaryLitres(
   snapshots: StockSnapshotRow[],
   product: StockProduct,
   kind: "opening" | "closing",
-  date: string
+  date: string,
+  dsrBoundaries?: DsrStockBoundaries | null
 ): number | null {
   const monthKey = monthKeyFromDate(date);
   const monthRow = findSnapshot(snapshots, product, kind, "month", monthKey);
@@ -72,6 +74,12 @@ function resolveBoundaryLitres(
   if (kind === "closing" && isFyEndDate(date)) {
     const fyRow = findSnapshot(snapshots, product, "closing", "financial_year", fyYear);
     if (fyRow) return fyRow.quantity_litres;
+  }
+
+  if (dsrBoundaries) {
+    return kind === "opening"
+      ? dsrBoundaries[product].opening
+      : dsrBoundaries[product].closing;
   }
 
   return null;
@@ -98,16 +106,36 @@ function buildProductMovement(
   };
 }
 
+function usedManualSnapshot(
+  snapshots: StockSnapshotRow[],
+  product: StockProduct,
+  kind: "opening" | "closing",
+  date: string
+): boolean {
+  const monthKey = monthKeyFromDate(date);
+  if (findSnapshot(snapshots, product, kind, "month", monthKey)) return true;
+
+  const fyYear = String(fyStartYearForDate(date));
+  if (kind === "opening" && isFyStartDate(date)) {
+    return Boolean(findSnapshot(snapshots, product, "opening", "financial_year", fyYear));
+  }
+  if (kind === "closing" && isFyEndDate(date)) {
+    return Boolean(findSnapshot(snapshots, product, "closing", "financial_year", fyYear));
+  }
+  return false;
+}
+
 export function resolveStockForPeriod(
   snapshots: StockSnapshotRow[],
   dateFrom: string,
   dateTo: string,
-  purchasesByProduct: Record<StockProduct, number>
+  purchasesByProduct: Record<StockProduct, number>,
+  dsrBoundaries?: DsrStockBoundaries | null
 ): StockPeriodSummary {
-  const msOpening = resolveBoundaryLitres(snapshots, "MS", "opening", dateFrom);
-  const msClosing = resolveBoundaryLitres(snapshots, "MS", "closing", dateTo);
-  const hsdOpening = resolveBoundaryLitres(snapshots, "HSD", "opening", dateFrom);
-  const hsdClosing = resolveBoundaryLitres(snapshots, "HSD", "closing", dateTo);
+  const msOpening = resolveBoundaryLitres(snapshots, "MS", "opening", dateFrom, dsrBoundaries);
+  const msClosing = resolveBoundaryLitres(snapshots, "MS", "closing", dateTo, dsrBoundaries);
+  const hsdOpening = resolveBoundaryLitres(snapshots, "HSD", "opening", dateFrom, dsrBoundaries);
+  const hsdClosing = resolveBoundaryLitres(snapshots, "HSD", "closing", dateTo, dsrBoundaries);
 
   const ms = buildProductMovement("MS", msOpening, purchasesByProduct.MS, msClosing);
   const hsd = buildProductMovement("HSD", hsdOpening, purchasesByProduct.HSD, hsdClosing);
@@ -117,6 +145,22 @@ export function resolveStockForPeriod(
   const hasPartialOpening = ms.openingLitres != null || hsd.openingLitres != null;
   const hasPartialClosing = ms.closingLitres != null || hsd.closingLitres != null;
 
+  const manualMsOpening = usedManualSnapshot(snapshots, "MS", "opening", dateFrom);
+  const manualMsClosing = usedManualSnapshot(snapshots, "MS", "closing", dateTo);
+  const manualHsdOpening = usedManualSnapshot(snapshots, "HSD", "opening", dateFrom);
+  const manualHsdClosing = usedManualSnapshot(snapshots, "HSD", "closing", dateTo);
+  const anyManual =
+    manualMsOpening || manualMsClosing || manualHsdOpening || manualHsdClosing;
+  const anyDsr =
+    Boolean(dsrBoundaries) &&
+    (["MS", "HSD"] as const).some((product) => {
+      const usedManualOpening = product === "MS" ? manualMsOpening : manualHsdOpening;
+      const usedManualClosing = product === "MS" ? manualMsClosing : manualHsdClosing;
+      const dsrOpening = dsrBoundaries?.[product].opening != null && !usedManualOpening;
+      const dsrClosing = dsrBoundaries?.[product].closing != null && !usedManualClosing;
+      return dsrOpening || dsrClosing;
+    });
+
   let coverage: StockCoverage = "none";
   let coverageNote: string | null = null;
 
@@ -124,13 +168,20 @@ export function resolveStockForPeriod(
     const fyStartYear = fyStartYearForDate(dateFrom);
     const isFullFy = dateFrom === `${fyStartYear}-04-01` && dateTo === `${fyStartYear + 1}-03-31`;
     coverage = isFullFy ? "full" : "fy_boundaries";
-    if (!isFullFy) {
+    if (anyManual && anyDsr) {
+      coverageNote =
+        "Stock uses saved manual values where entered; remaining boundaries come from DSR.";
+    } else if (anyDsr && !anyManual) {
+      coverageNote = "Stock from DSR tank readings. Save manual values to override.";
+    } else if (!isFullFy) {
       coverageNote =
         "Stock uses FY opening/closing at period boundaries. Add monthly stock for month-wise movement.";
     }
   } else if (hasPartialOpening || hasPartialClosing) {
     coverage = "partial";
-    coverageNote = "Stock data is incomplete for this period.";
+    coverageNote = anyDsr
+      ? "Stock data is incomplete for this period (partial DSR or manual entry)."
+      : "Stock data is incomplete for this period.";
   } else {
     coverageNote = "No stock snapshots for this period. Purchases from invoices are still shown.";
   }

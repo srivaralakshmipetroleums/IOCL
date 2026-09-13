@@ -1,0 +1,98 @@
+import { describe, expect, it } from "vitest";
+import { buildDsrLedgerRows } from "@/lib/iras/dsr/metrics";
+import type { DsrStoredRecordEntry } from "@/lib/iras/dsr/query-helpers";
+import {
+  deriveDsrStockBoundaries,
+  hasFullDsrStockBoundary,
+} from "@/lib/stock/dsr-stock-boundaries";
+import { resolveStockForPeriod } from "@/lib/stock/resolve-period";
+
+function entry(
+  product: "MS" | "HSD",
+  date: string,
+  opening: number,
+  closing: number
+): DsrStoredRecordEntry {
+  return {
+    product,
+    dsrDate: date,
+    record: {
+      date_time: date,
+      totalOpeningStock: opening,
+      totalStock: closing,
+    },
+  };
+}
+
+describe("deriveDsrStockBoundaries", () => {
+  it("uses first-day opening stock and last-day total stock per product", () => {
+    const rows = buildDsrLedgerRows([
+      entry("MS", "01-08-2026", 13486.7, 13486.7),
+      entry("MS", "31-08-2026", 6098.92, 15098.92),
+      entry("HSD", "01-08-2026", 12885.2, 12885.2),
+      entry("HSD", "31-08-2026", 8823.2, 13823.2),
+    ]);
+
+    const boundaries = deriveDsrStockBoundaries(rows, "2026-08-01", "2026-08-31");
+
+    expect(boundaries.MS.opening).toBe(13486.7);
+    expect(boundaries.MS.closing).toBe(15098.92);
+    expect(boundaries.HSD.opening).toBe(12885.2);
+    expect(boundaries.HSD.closing).toBe(13823.2);
+    expect(hasFullDsrStockBoundary(boundaries)).toBe(true);
+  });
+});
+
+describe("resolveStockForPeriod with DSR fallback", () => {
+  it("uses DSR when manual monthly snapshots are missing", () => {
+    const dsrRows = buildDsrLedgerRows([
+      entry("MS", "01-08-2026", 100, 100),
+      entry("MS", "31-08-2026", 80, 120),
+      entry("HSD", "01-08-2026", 200, 200),
+      entry("HSD", "31-08-2026", 150, 180),
+    ]);
+    const boundaries = deriveDsrStockBoundaries(dsrRows, "2026-08-01", "2026-08-31");
+
+    const result = resolveStockForPeriod([], "2026-08-01", "2026-08-31", { MS: 1000, HSD: 2000 }, boundaries);
+
+    expect(result.ms.openingLitres).toBe(100);
+    expect(result.ms.closingLitres).toBe(120);
+    expect(result.hsd.openingLitres).toBe(200);
+    expect(result.hsd.closingLitres).toBe(180);
+    expect(result.ms.impliedSalesLitres).toBe(100 + 1000 - 120);
+    expect(result.coverageNote).toContain("DSR");
+  });
+
+  it("prefers manual snapshots over DSR", () => {
+    const dsrRows = buildDsrLedgerRows([
+      entry("MS", "01-08-2026", 100, 100),
+      entry("MS", "31-08-2026", 80, 120),
+      entry("HSD", "01-08-2026", 200, 200),
+      entry("HSD", "31-08-2026", 150, 180),
+    ]);
+    const boundaries = deriveDsrStockBoundaries(dsrRows, "2026-08-01", "2026-08-31");
+
+    const result = resolveStockForPeriod(
+      [
+        {
+          id: "1",
+          scope: "month",
+          period_key: "2026-08",
+          product: "MS",
+          snapshot_kind: "opening",
+          quantity_litres: 999,
+          effective_date: "2026-08-01",
+          notes: null,
+        },
+      ],
+      "2026-08-01",
+      "2026-08-31",
+      { MS: 1000, HSD: 2000 },
+      boundaries
+    );
+
+    expect(result.ms.openingLitres).toBe(999);
+    expect(result.ms.closingLitres).toBe(120);
+    expect(result.hsd.openingLitres).toBe(200);
+  });
+});

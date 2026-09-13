@@ -10,7 +10,10 @@ import type { DashboardFilters } from "@/lib/dashboard/filters";
 import { normalizeFuelProduct } from "@/lib/dashboard/fuel-products";
 import { getFilteredInvoices, getFilteredLineItems } from "@/lib/dashboard/query-helpers";
 import { loadPadDashboardData } from "@/lib/pad/load-dashboard";
+import { buildDsrLedgerRows } from "@/lib/iras/dsr/metrics";
+import { getDsrRecordsInPeriod } from "@/lib/iras/dsr/query-helpers";
 import { computeFuelSalesReport } from "@/lib/stock/fuel-sales-report";
+import { deriveDsrStockBoundaries } from "@/lib/stock/dsr-stock-boundaries";
 import { getStockSnapshots } from "@/lib/stock/repository";
 import { resolveStockForPeriod, stockProductFromFuel } from "@/lib/stock/resolve-period";
 import type { BusinessDashboardPayload, StockProduct } from "@/lib/stock/types";
@@ -26,11 +29,12 @@ export async function loadBusinessDashboard(
   const dateFrom = filters.dateFrom ?? "";
   const dateTo = filters.dateTo ?? "";
 
-  const [snapshots, padData, bankData, invoices] = await Promise.all([
+  const [snapshots, padData, bankData, invoices, dsrEntries] = await Promise.all([
     getStockSnapshots(supabase),
     loadPadDashboardData(supabase, filters),
     loadBankDashboardData(supabase, filters),
     getFilteredInvoices(supabase, filters),
+    getDsrRecordsInPeriod(supabase, { dateFrom, dateTo, months: filters.months }),
   ]);
 
   const invoiceIds = invoices.map((invoice) => invoice.id);
@@ -51,7 +55,18 @@ export async function loadBusinessDashboard(
   }
 
   const fuelInvoiceIds = new Set(lineItems.map((item) => item.invoice_id));
-  const stock = resolveStockForPeriod(snapshots, dateFrom, dateTo, purchasesByProduct);
+  const dsrBoundaries = deriveDsrStockBoundaries(
+    buildDsrLedgerRows(dsrEntries),
+    dateFrom,
+    dateTo
+  );
+  const stock = resolveStockForPeriod(
+    snapshots,
+    dateFrom,
+    dateTo,
+    purchasesByProduct,
+    dsrBoundaries
+  );
 
   const bankReport = computeBankReportSummary(
     bankData.transactions,
