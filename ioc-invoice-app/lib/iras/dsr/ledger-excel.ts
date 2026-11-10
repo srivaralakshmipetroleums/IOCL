@@ -30,9 +30,8 @@ function columnWidth(column: DsrLedgerColumn): number {
 
 function cellValue(row: DsrLedgerRow, column: DsrLedgerColumn): string | number | null {
   const value = row[column.key];
-  if (value == null || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  return String(value);
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return value;
 }
 
 function totalCell(

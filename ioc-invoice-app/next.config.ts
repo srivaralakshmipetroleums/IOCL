@@ -1,9 +1,12 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 
+const appRoot = path.resolve(__dirname);
+
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: appRoot,
   turbopack: {
-    root: path.resolve(__dirname),
+    root: appRoot,
   },
   serverExternalPackages: ["exceljs", "pdfjs-dist", "playwright"],
   experimental: {
