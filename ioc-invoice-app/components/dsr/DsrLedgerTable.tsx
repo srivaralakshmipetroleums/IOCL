@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrencyINR, formatIndianNumber } from "@/lib/dashboard/format";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, FileSpreadsheet, SlidersHorizontal } from "lucide-react";
+import { formatCurrencyINR, formatIndianNumber, formatPricePerLitre } from "@/lib/dashboard/format";
+import { triggerBrowserDownload } from "@/lib/download-file";
+import {
+  DSR_LEDGER_DEFAULT_VISIBLE_KEYS,
+  DSR_LEDGER_MEASURE_COLUMNS,
+  parseDsrLedgerVisibleKeys,
+  type DsrLedgerColumnFormat,
+  type DsrLedgerMeasureKey,
+} from "@/lib/iras/dsr/ledger-columns";
 import type { DsrLedgerRow } from "@/lib/iras/dsr/normalize";
 import type { IrasDsrProduct } from "@/lib/iras/dsr/types";
 import { Button } from "@/components/ui/button";
@@ -14,30 +22,7 @@ const PRODUCT_COLORS: Record<IrasDsrProduct, string> = {
   HSD: "bg-ioc-orange-light text-[#C77700]",
 };
 
-const LEDGER_COLUMNS: Array<{
-  key: keyof DsrLedgerRow;
-  label: string;
-  format: "litres" | "number" | "money";
-}> = [
-  { key: "productDip", label: "Product dip", format: "number" },
-  { key: "productVolume", label: "Product volume", format: "litres" },
-  { key: "totalOpeningStock", label: "Opening stock", format: "litres" },
-  { key: "receiptAsAutomation", label: "Receipt", format: "litres" },
-  { key: "totalStock", label: "Total stock", format: "litres" },
-  { key: "nozzleN1", label: "Nozzle N1", format: "number" },
-  { key: "nozzleN2", label: "Nozzle N2", format: "number" },
-  { key: "testingLitres", label: "Testing", format: "litres" },
-  { key: "netTankSales", label: "Net tank sales", format: "litres" },
-  { key: "netTotalizerSales", label: "Net totalizer sales", format: "litres" },
-  { key: "netCumulativeTotalizerSales", label: "Cum. totalizer", format: "litres" },
-  { key: "netTransactionSales", label: "Net transaction sales", format: "litres" },
-  { key: "netCumulativeTransactionSales", label: "Cum. transaction", format: "litres" },
-  { key: "lossGainDayTotalizer", label: "L/G day (totalizer)", format: "litres" },
-  { key: "cummLossGainMonthTotalizer", label: "Cum. L/G (totalizer)", format: "litres" },
-  { key: "lossGainDayTransaction", label: "L/G day (transaction)", format: "litres" },
-  { key: "cummLossGainMonthTransaction", label: "Cum. L/G (transaction)", format: "litres" },
-  { key: "grossProfit", label: "Gross profit", format: "money" },
-];
+const VISIBLE_COLUMNS_STORAGE_KEY = "dsr-ledger-visible-columns";
 
 function monthKey(date: string): string {
   return date.slice(0, 7);
@@ -56,32 +41,82 @@ function formatLitres(value: number | null): string {
   return `${formatIndianNumber(value)} L`;
 }
 
-function formatCell(value: number | null, format: "litres" | "number" | "money"): string {
+function formatCell(value: number | null, format: DsrLedgerColumnFormat): string {
   if (value == null) return "—";
   if (format === "money") return formatCurrencyINR(value);
+  if (format === "rate") return formatPricePerLitre(value);
   if (format === "litres") return formatLitres(value);
   return formatIndianNumber(value);
+}
+
+function loadVisibleKeys(): DsrLedgerMeasureKey[] {
+  if (typeof window === "undefined") return DSR_LEDGER_DEFAULT_VISIBLE_KEYS;
+  try {
+    const raw = window.localStorage.getItem(VISIBLE_COLUMNS_STORAGE_KEY);
+    if (!raw) return DSR_LEDGER_DEFAULT_VISIBLE_KEYS;
+    return parseDsrLedgerVisibleKeys(JSON.parse(raw)) ?? DSR_LEDGER_DEFAULT_VISIBLE_KEYS;
+  } catch {
+    return DSR_LEDGER_DEFAULT_VISIBLE_KEYS;
+  }
 }
 
 interface DsrLedgerTableProps {
   rows: DsrLedgerRow[];
   isLoading?: boolean;
+  dateFrom: string;
+  dateTo: string;
+  periodLabel?: string;
 }
 
-export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
+export function DsrLedgerTable({
+  rows,
+  isLoading,
+  dateFrom,
+  dateTo,
+  periodLabel,
+}: DsrLedgerTableProps) {
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState<"" | IrasDsrProduct>("");
   const [pageIndex, setPageIndex] = useState(0);
+  const [visibleKeys, setVisibleKeys] = useState<DsrLedgerMeasureKey[]>(DSR_LEDGER_DEFAULT_VISIBLE_KEYS);
+  const [columnsReady, setColumnsReady] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const columnsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setVisibleKeys(loadVisibleKeys());
+    setColumnsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!columnsReady) return;
+    window.localStorage.setItem(VISIBLE_COLUMNS_STORAGE_KEY, JSON.stringify(visibleKeys));
+  }, [visibleKeys, columnsReady]);
+
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      if (!columnsRef.current?.contains(event.target as Node)) {
+        setColumnsOpen(false);
+      }
+    }
+    if (!columnsOpen) return;
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [columnsOpen]);
+
+  const visibleColumns = useMemo(
+    () => DSR_LEDGER_MEASURE_COLUMNS.filter((column) => visibleKeys.includes(column.key)),
+    [visibleKeys]
+  );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return rows.filter((row) => {
       const textMatch =
         !query ||
-        [row.dateDisplay, row.product, row.date]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
+        [row.dateDisplay, row.product, row.date].join(" ").toLowerCase().includes(query);
       const productMatch = !productFilter || row.product === productFilter;
       return textMatch && productMatch;
     });
@@ -99,9 +134,7 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
     setPageIndex(0);
   }, [monthsInView, search, productFilter]);
 
-  const safePageIndex = monthsInView.length
-    ? Math.min(pageIndex, monthsInView.length - 1)
-    : 0;
+  const safePageIndex = monthsInView.length ? Math.min(pageIndex, monthsInView.length - 1) : 0;
   const activeMonth = monthsInView[safePageIndex] ?? null;
 
   const pageRows = useMemo(() => {
@@ -109,9 +142,48 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
     return filtered.filter((row) => monthKey(row.date) === activeMonth);
   }, [filtered, activeMonth]);
 
+  function toggleColumn(key: DsrLedgerMeasureKey) {
+    setVisibleKeys((current) =>
+      current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
+    );
+  }
+
+  async function exportExcel() {
+    if (filtered.length === 0) return;
+    setExportError(null);
+    setExporting(true);
+    try {
+      const res = await fetch("/api/dashboard/dsr/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dateFrom,
+          dateTo,
+          label: periodLabel,
+          columnKeys: visibleKeys,
+          rows: filtered,
+        }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({ error: "Export failed" }));
+        throw new Error(payload.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition");
+      const filenameMatch = disposition?.match(/filename="(.+)"/);
+      triggerBrowserDownload(blob, filenameMatch?.[1] || "DSR_Ledger.xlsx");
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (isLoading) {
     return <div className="ioc-card p-6 text-sm text-ioc-muted">Loading DSR ledger...</div>;
   }
+
+  const tableMinWidth = Math.max(720, 180 + visibleColumns.length * 140);
 
   return (
     <div className="ioc-card overflow-hidden">
@@ -132,7 +204,75 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
           <option value="MS">MS</option>
           <option value="HSD">HSD</option>
         </select>
+        <div className="relative" ref={columnsRef}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setColumnsOpen((open) => !open)}
+            aria-expanded={columnsOpen}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Columns
+          </Button>
+          {columnsOpen && (
+            <div className="absolute right-0 z-30 mt-2 w-72 rounded-[10px] border border-ioc-border bg-white p-3 shadow-lg">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-ioc-muted">Visible columns</p>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    className="text-xs text-ioc-blue hover:underline"
+                    onClick={() => setVisibleKeys(DSR_LEDGER_DEFAULT_VISIBLE_KEYS)}
+                  >
+                    Summary
+                  </button>
+                  <span className="text-ioc-muted">·</span>
+                  <button
+                    type="button"
+                    className="text-xs text-ioc-blue hover:underline"
+                    onClick={() =>
+                      setVisibleKeys(DSR_LEDGER_MEASURE_COLUMNS.map((column) => column.key))
+                    }
+                  >
+                    All
+                  </button>
+                </div>
+              </div>
+              <div className="max-h-72 space-y-1 overflow-y-auto">
+                {DSR_LEDGER_MEASURE_COLUMNS.map((column) => (
+                  <label
+                    key={column.key}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-ioc-navy hover:bg-ioc-surface/60"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visibleKeys.includes(column.key)}
+                      onChange={() => toggleColumn(column.key)}
+                    />
+                    {column.label}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] text-ioc-muted">Date and product stay visible. Excel always includes RSP.</p>
+            </div>
+          )}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void exportExcel()}
+          disabled={exporting || filtered.length === 0}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          {exporting ? "Exporting..." : "Download Excel"}
+        </Button>
       </div>
+
+      {exportError && (
+        <p className="border-b border-ioc-warning/30 bg-ioc-warning-light px-4 py-2 text-sm text-ioc-navy">
+          {exportError}
+        </p>
+      )}
 
       {monthsInView.length > 1 && (
         <div className="flex items-center justify-between gap-2 border-b border-ioc-border bg-ioc-surface/50 px-3 py-2 sm:px-4">
@@ -171,12 +311,12 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
       )}
 
       <WideTableScroll>
-        <table className="w-full min-w-[2400px] text-sm">
+        <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
           <thead>
             <tr className="border-b border-ioc-border bg-ioc-surface/30 text-left text-ioc-muted">
               <th className="sticky left-0 z-10 bg-ioc-surface/95 px-3 py-3">Date</th>
               <th className="sticky left-[88px] z-10 bg-ioc-surface/95 px-3 py-3">Product</th>
-              {LEDGER_COLUMNS.map((column) => (
+              {visibleColumns.map((column) => (
                 <th key={column.key} className="whitespace-nowrap px-3 py-3 text-right">
                   {column.label}
                 </th>
@@ -186,7 +326,7 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
           <tbody>
             {pageRows.length === 0 ? (
               <tr>
-                <td colSpan={LEDGER_COLUMNS.length + 2} className="px-4 py-8 text-center text-ioc-muted">
+                <td colSpan={visibleColumns.length + 2} className="px-4 py-8 text-center text-ioc-muted">
                   No DSR records for this period.
                 </td>
               </tr>
@@ -206,7 +346,7 @@ export function DsrLedgerTable({ rows, isLoading }: DsrLedgerTableProps) {
                       {row.product}
                     </span>
                   </td>
-                  {LEDGER_COLUMNS.map((column) => (
+                  {visibleColumns.map((column) => (
                     <td key={column.key} className="whitespace-nowrap px-3 py-2.5 text-right">
                       {formatCell(row[column.key] as number | null, column.format)}
                     </td>

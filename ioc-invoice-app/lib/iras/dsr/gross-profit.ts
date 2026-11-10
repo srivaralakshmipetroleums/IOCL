@@ -112,6 +112,7 @@ export function attachGrossProfitToLedgerRows(
   const purchaseLookup = buildPurchaseRateLookup(invoiceByDateProduct);
   return rows.map((row) => ({
     ...row,
+    rspPerLitre: rspLookup(row.product, row.date),
     grossProfit: computeDsrRowGrossProfit(row, rspLookup, purchaseLookup),
   }));
 }

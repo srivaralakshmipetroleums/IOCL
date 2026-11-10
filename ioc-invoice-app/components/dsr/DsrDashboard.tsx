@@ -132,11 +132,18 @@ export function DsrDashboard() {
 
       <SectionTitle>Daily ledger</SectionTitle>
       <p className="mb-3 text-sm text-ioc-muted">
-        All values are in litres unless noted. Gross profit per row is that day&apos;s totalizer
-        litres × (RSP − invoice purchase rate) for MS or HSD. Period totals sum those daily values
-        per product.
+        All values are in litres unless noted. Choose columns, then download Excel for the filtered
+        rows. The spreadsheet always includes that day&apos;s RSP and a totals row for receipt, net
+        totalizer sales, and gross profit. Gross profit per row is that day&apos;s totalizer litres
+        × (RSP − invoice purchase rate) for MS or HSD.
       </p>
-      <DsrLedgerTable rows={data?.records ?? []} isLoading={isLoading} />
+      <DsrLedgerTable
+        rows={data?.records ?? []}
+        isLoading={isLoading}
+        dateFrom={period.dateFrom}
+        dateTo={period.dateTo}
+        periodLabel={period.label}
+      />
 
       <SectionTitle>Receipt vs invoice</SectionTitle>
       <DsrReceiptReconciliationTable

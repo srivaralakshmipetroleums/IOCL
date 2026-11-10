@@ -23,6 +23,7 @@ export interface DsrLedgerRow {
   cummLossGainMonthTotalizer: number | null;
   lossGainDayTransaction: number | null;
   cummLossGainMonthTransaction: number | null;
+  rspPerLitre: number | null;
   grossProfit: number | null;
 }
 
@@ -136,6 +137,7 @@ export function normalizeDsrRecord(
     cummLossGainMonthTotalizer: firstNumericField(record, CUM_LOSS_GAIN_TOTALIZER_KEYS),
     lossGainDayTransaction: firstNumericField(record, LOSS_GAIN_DAY_TRANSACTION_KEYS),
     cummLossGainMonthTransaction: firstNumericField(record, CUM_LOSS_GAIN_TRANSACTION_KEYS),
+    rspPerLitre: null,
     grossProfit: grossProfit != null ? roundMoney(grossProfit) : null,
   };
 }
