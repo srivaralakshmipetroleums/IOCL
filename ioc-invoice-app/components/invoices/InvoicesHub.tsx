@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GmailPage } from "@/components/gmail/GmailPage";
 import { InvoiceListPage } from "@/components/invoices/InvoiceListPage";
@@ -25,15 +25,20 @@ export function InvoicesHub() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const tab: InvoicesTab = isInvoicesTab(tabParam) ? tabParam : "list";
+  const urlTab: InvoicesTab = isInvoicesTab(tabParam) ? tabParam : "list";
+  const [tab, setTabState] = useState(urlTab);
+
+  useEffect(() => setTabState(urlTab), [urlTab]);
 
   const setTab = useCallback(
     (next: InvoicesTab) => {
+      if (next === tab) return;
+      setTabState(next);
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", next);
-      router.push(`${pathname}?${params.toString()}`);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
-    [pathname, router, searchParams]
+    [pathname, router, searchParams, tab]
   );
 
   return (

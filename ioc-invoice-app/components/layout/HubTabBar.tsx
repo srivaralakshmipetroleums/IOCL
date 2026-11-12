@@ -15,30 +15,48 @@ interface HubTabBarProps {
 }
 
 export function HubTabBar({ tabs, active, onChange, className }: HubTabBarProps) {
+  function select(id: string) {
+    if (id === active) return;
+    onChange(id);
+  }
+
   return (
-    <div className={cn("overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]", className)}>
-      <div
-        className="flex w-max min-w-full flex-nowrap gap-1 rounded-[10px] border border-ioc-border bg-ioc-surface/40 p-1"
-        role="tablist"
-      >
-        {tabs.map((tab) => (
+    <div
+      role="tablist"
+      className={cn(
+        "grid w-full gap-1 rounded-[10px] border border-ioc-border bg-ioc-surface/40 p-1",
+        className
+      )}
+      style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+    >
+      {tabs.map((tab) => {
+        const isActive = active === tab.id;
+        return (
           <button
             key={tab.id}
             type="button"
             role="tab"
-            aria-selected={active === tab.id}
-            onClick={() => onChange(tab.id)}
+            aria-selected={isActive}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              if (event.pointerType === "touch" || event.pointerType === "pen") {
+                event.preventDefault();
+                select(tab.id);
+              }
+            }}
+            onClick={() => select(tab.id)}
             className={cn(
-              "shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4",
-              active === tab.id
+              "min-h-11 touch-manipulation select-none rounded-lg px-1.5 py-2 text-center text-xs font-semibold leading-tight sm:min-h-10 sm:px-3 sm:text-sm",
+              "[-webkit-tap-highlight-color:transparent]",
+              isActive
                 ? "bg-white text-ioc-navy shadow-sm"
-                : "text-ioc-muted hover:text-ioc-navy"
+                : "text-ioc-muted active:bg-white/80 active:text-ioc-navy"
             )}
           >
             {tab.label}
           </button>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }

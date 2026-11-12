@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { HubTabBar } from "@/components/layout/HubTabBar";
 import { BrandedLoader } from "@/components/brand/BrandedLoader";
@@ -129,44 +129,68 @@ export function HomeHub() {
   const tabParam = searchParams.get("tab");
   const financeParam = searchParams.get("finance");
   const salesViewParam = searchParams.get("salesView");
-  const tab: HomeTab = isHomeTab(tabParam) ? tabParam : "overview";
-  const financeTab: FinanceTab = isFinanceTab(financeParam) ? financeParam : "pad";
-  const salesView: SalesView = isSalesView(salesViewParam) ? salesViewParam : "invoice";
+  const urlTab: HomeTab = isHomeTab(tabParam) ? tabParam : "overview";
+  const urlFinanceTab: FinanceTab = isFinanceTab(financeParam) ? financeParam : "pad";
+  const urlSalesView: SalesView = isSalesView(salesViewParam) ? salesViewParam : "invoice";
+  const [tab, setTabState] = useState(urlTab);
+  const [financeTab, setFinanceTabState] = useState(urlFinanceTab);
+  const [salesView, setSalesViewState] = useState(urlSalesView);
+
+  useEffect(() => setTabState(urlTab), [urlTab]);
+  useEffect(() => setFinanceTabState(urlFinanceTab), [urlFinanceTab]);
+  useEffect(() => setSalesViewState(urlSalesView), [urlSalesView]);
+
+  const replaceQuery = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(searchParams.toString());
+      mutate(params);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const setTab = useCallback(
     (next: HomeTab) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", next);
-      if (next !== "finance") params.delete("finance");
-      if (next !== "sales") params.delete("salesView");
-      router.push(`${pathname}?${params.toString()}`);
+      if (next === tab) return;
+      setTabState(next);
+      replaceQuery((params) => {
+        params.set("tab", next);
+        if (next !== "finance") params.delete("finance");
+        if (next !== "sales") params.delete("salesView");
+      });
     },
-    [pathname, router, searchParams]
+    [replaceQuery, tab]
   );
 
   const setFinanceTab = useCallback(
     (next: FinanceTab) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "finance");
-      params.set("finance", next);
-      router.push(`${pathname}?${params.toString()}`);
+      if (next === financeTab) return;
+      setFinanceTabState(next);
+      replaceQuery((params) => {
+        params.set("tab", "finance");
+        params.set("finance", next);
+      });
     },
-    [pathname, router, searchParams]
+    [financeTab, replaceQuery]
   );
 
   const setSalesView = useCallback(
     (next: SalesView) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "sales");
-      params.set("salesView", next);
-      router.push(`${pathname}?${params.toString()}`);
+      if (next === salesView) return;
+      setSalesViewState(next);
+      replaceQuery((params) => {
+        params.set("tab", "sales");
+        params.set("salesView", next);
+      });
     },
-    [pathname, router, searchParams]
+    [replaceQuery, salesView]
   );
 
   return (
     <div className="min-w-0 space-y-6">
-      <HubTabBar tabs={[...HOME_TABS]} active={tab} onChange={(id) => setTab(id as HomeTab)} />
+      <div className="sticky top-0 z-20 -mx-3 bg-ioc-page/95 px-3 py-2 backdrop-blur-sm sm:-mx-4 sm:px-4 md:-mx-6 md:px-6">
+        <HubTabBar tabs={[...HOME_TABS]} active={tab} onChange={(id) => setTab(id as HomeTab)} />
+      </div>
       {tab === "overview" && <BusinessDashboard />}
       {tab === "sales" && (
         <SalesTab salesView={salesView} onSalesViewChange={setSalesView} />
